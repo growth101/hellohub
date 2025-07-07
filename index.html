@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelloHub - Visitor Management</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
+            position: relative;
+        }
+        body.alex-davis-logged-in::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90vw;
+            height: 45vw;
+            max-width: 800px;
+            max-height: 400px;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxlbGxpcHNlIGN4PSIyMDAiIGN5PSIxMDAiIHJ4PSIxOTAiIHJ5PSI5MCIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjQzBDMEMwIiBzdHJva2Utd2lkdGg9IjMiLz4KPHN2ZyB4PSI1MCIgeT0iMzAiIHdpZHRoPSIzMDAiIGhlaWdodD0iMTQwIj4KICA8IS0tIENyb3duIC0tPgogIDxwYXRoIGQ9Ik0yNTAgNDAgTDI2MCAzMCBMMjcwIDQwIEwyNjggNTAgTDI3MCA2MCBMMjYwIDUwIEwyNTAgNjAiIGZpbGw9IiNEQUE1MjAiLz4KICA8IS0tIEFsZXhEYXZpcyBUZXh0IC0tPgogIDx0ZXh0IHg9IjE1IiB5PSI4NSIgZm9udC1mYW1pbHk9InNlcmlmIiBmb250LXNpemU9IjM2IiBmb250LXN0eWxlPSJpdGFsaWMiIGZpbGw9IndoaXRlIj5BbGV4RGF2aXM8L3RleHQ+CiAgPCEtLSBIYW5kIC0tPgogIDxwYXRoIGQ9Ik0xMDAgMTEwIEwxMzAgMTAwIEwxNDUgMTA1IEwxNTAgMTEwIEwxNDUgMTE1IEwxMzAgMTIwIEwxMDAgMTMwIFoiIGZpbGw9IiNEQUE1MjAiLz4KICA8IS0tIENBUkUgR1JPVVAgVGV4dCAtLT4KICA8dGV4dCB4PSI4MCIgeT0iMTI1IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiBsZXR0ZXItc3BhY2luZz0iM3B4Ij5DQVJFIEJST1VQPC90ZXh0Pgo8L3N2Zz4KPC9zdmc+');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.25;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.7); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            max-width: 500px; width: 100%; min-height: 600px; position: relative;
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;
+        }
+        .header h1 { font-size: 24px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .content { padding: 40px; position: relative; min-height: 400px; }
+        .admin-logo {
+            position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+            cursor: pointer; user-select: none; z-index: 100;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 14px; }
+        .required { color: #e74c3c; }
+        input, select {
+            width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
+            font-size: 16px; background: #f8f9fa; transition: all 0.3s ease;
+        }
+        input:focus, select:focus {
+            outline: none; border-color: #74b9ff; background: white; box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.1);
+        }
+        .btn {
+            width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold;
+            cursor: pointer; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+        }
+        .btn-primary { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
+        .btn-success { background: linear-gradient(135deg, #00b894, #00a085); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #fdcb6e, #e17055); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn:hover { transform: translateY(-2px); }
+        .user-type-selection { display: flex; gap: 10px; margin-bottom: 30px; }
+        .user-type-btn {
+            flex: 1; padding: 20px; border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9fa;
+            cursor: pointer; text-align: center; transition: all 0.3s ease;
+        }
+        .user-type-btn:hover { border-color: #74b9ff; background: white; }
+        .user-type-btn.active { border-color: #74b9ff; background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
+        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .alert-success { background: #d1f2eb; color: #00695c; border: 1px solid #a7f3d0; }
+        .alert-info { background: #e3f2fd; color: #0277bd; border: 1px solid #b3e5fc; }
+        .countdown { margin-top: 15px; font-size: 16px; font-weight: bold; color: #0277bd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="headerTitle">👋 HelloHub</h1>
+            <p id="headerSubtitle">Visitor, Client & Staff Management</p>
+        </div>
+        <div class="content">
+            <div class="admin-logo" onclick="adminClick()">
+                <svg width="80" height="50" viewBox="0 0 400 200">
+                    <rect x="20" y="40" width="200" height="120" rx="25" ry="25" fill="#000000"/>
+                    <circle cx="120" cy="85" r="15" fill="white"/>
+                    <ellipse cx="120" cy="120" rx="12" ry="20" fill="white"/>
+                    <path d="M140 95 Q148 90 152 95 Q156 100 150 105 Q144 110 140 105 Q136 100 140 95" fill="white"/>
+                    <path d="M50 160 L35 180 L65 160 Z" fill="#000000"/>
+                    <text x="250" y="110" font-family="Arial" font-size="32" font-weight="bold" fill="#000000">HelloHub</text>
+                </svg>
+            </div>
+
+            <div id="loginPage" class="page active">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Company Login</h2>
+                <div class="form-group">
+                    <label for="emailAddress">Email Address:</label>
+                    <input type="email" id="emailAddress" placeholder="Enter your company email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Enter your password">
+                </div>
+                <button class="btn btn-primary" onclick="validateLogin()">🔐 Login</button>
+                <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+            </div>
+
+            <div id="businessSelect" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Select Location</h2>
+                <div class="form-group">
+                    <label for="businessDropdown">Choose Business Location:</label>
+                    <select id="businessDropdown" onchange="selectBusiness()">
+                        <option value="">-- Select Location --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="userTypeSelect" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">I am a...</h2>
+                <div class="user-type-selection">
+                    <div class="user-type-btn" onclick="selectUserType('visitor')">
+                        <div style="font-size: 24px; margin-bottom: 10px;">👥</div>
+                        <div style="font-weight: bold;">Visitor</div>
+                    </div>
+                    <div class="user-type-btn" onclick="selectUserType('client')">
+                        <div style="font-size: 24px; margin-bottom: 10px;">🤝</div>
+                        <div style="font-weight: bold;">Client</div>
+                    </div>
+                    <div class="user-type-btn" onclick="selectUserType('staff')">
+                        <div style="font-size: 24px; margin-bottom: 10px;">👨‍💼</div>
+                        <div style="font-weight: bold;">Staff</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn btn-primary" onclick="showAction('arriving')">Arriving</button>
+                    <button class="btn btn-warning" onclick="showAction('leaving')">Leaving</button>
+                </div>
+            </div>
+
+            <div id="arrivingPage" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Arriving</h2>
+                <div id="arrivalForm"></div>
+            </div>
+
+            <div id="leavingPage" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                <div class="alert alert-info">Enter your name to record departure:</div>
+                <div class="form-group">
+                    <label for="leaveFirst">First Name: <span class="required">*</span></label>
+                    <input type="text" id="leaveFirst" required>
+                </div>
+                <div class="form-group">
+                    <label for="leaveLast">Surname: <span class="required">*</span></label>
+                    <input type="text" id="leaveLast" required>
+                </div>
+                <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
+                    <span class="required">*</span> Required fields
+                </div>
+                <button class="btn btn-warning" onclick="recordDeparture()">Record Departure</button>
+                <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+            </div>
+
+            <div id="successPage" class="page">
+                <div class="alert alert-success">
+                    <h3 id="successMsg"></h3>
+                    <p id="successDetails"></p>
+                    <div id="countdown" class="countdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <script>
+        const APP = {
+            company: "",
+            locations: [],
+            dbUrl: '',
+            currentBusiness: '',
+            currentUserType: '',
+            adminClicks: 0,
+            isLoggedIn: false,
+            companyData: null
+        };
+
+        // Company database - in production, this would be stored securely on your server
+        const COMPANIES = {
+            'office@alexdavis.co.uk': {
+                password: 'office927',
+                companyName: 'Alex Davis Care Group',
+                locations: ['The Royal', 'The Crown', 'Seabreeze'],
+                dbUrl: 'https://script.google.com/macros/s/AKfycbzunnWtsyquoYdCn1jFKvxIlRxv59U7W5up2QEreQ3Eg2HqA7SIGqGY2GTb-wnIeWIv/exec'
+            },
+            'manager@xyztech.com': {
+                password: 'xyz789tech',
+                companyName: 'XYZ Technology Solutions',
+                locations: ['Head Office - Silicon Valley', 'Development Center - Austin', 'Support Hub - Denver'],
+                dbUrl: 'https://script.google.com/macros/s/DIFFERENT_GOOGLE_SHEETS_URL_FOR_XYZ/exec'
+            },
+            'contact@greenenv.com': {
+                password: 'green456env',
+                companyName: 'Green Environmental Services',
+                locations: ['Corporate HQ - Portland', 'Lab Facility - Seattle', 'Field Office - Vancouver'],
+                dbUrl: 'https://script.google.com/macros/s/ANOTHER_GOOGLE_SHEETS_URL_FOR_GREEN/exec'
+            }
+        };
+
+        function validateLogin() {
+            const emailAddress = document.getElementById('emailAddress').value.trim().toLowerCase();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!emailAddress || !password) {
+                showLoginError('Please enter both email address and password.');
+                return;
+            }
+            
+            if (COMPANIES[emailAddress] && COMPANIES[emailAddress].password === password) {
+                // Successful login
+                APP.companyData = COMPANIES[emailAddress];
+                APP.company = APP.companyData.companyName;
+                APP.locations = APP.companyData.locations;
+                APP.dbUrl = APP.companyData.dbUrl;
+                APP.isLoggedIn = true;
+                
+                // Clear login form
+                document.getElementById('emailAddress').value = '';
+                document.getElementById('password').value = '';
+                errorDiv.style.display = 'none';
+                
+                // Initialize business selection
+                initBusinessSelection();
+                showPage('businessSelect');
+            } else {
+                showLoginError('Invalid email address or password. Please try again.');
+            }
+        }
+
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function initBusinessSelection() {
+            const dropdown = document.getElementById('businessDropdown');
+            // Clear existing options
+            dropdown.innerHTML = '<option value="">-- Select Location --</option>';
+            
+            // Add company-specific locations
+            APP.locations.forEach((loc, i) => {
+                const opt = document.createElement('option');
+                opt.value = `loc-${i}`;
+                opt.textContent = loc;
+                dropdown.appendChild(opt);
+            });
+            autoSelect();
+        }
+
+        function init() {
+            // Start with login page - no longer auto-populate locations
+            showPage('loginPage');
+        }
+
+        function autoSelect() {
+            const dropdown = document.getElementById('businessDropdown');
+            if (APP.locations.length > 0) {
+                dropdown.value = 'loc-0';
+                selectBusiness();
+            }
+        }
+
+        function selectBusiness() {
+            APP.currentBusiness = document.getElementById('businessDropdown').value;
+            if (APP.currentBusiness) {
+                updateHeader();
+                showPage('userTypeSelect');
+            }
+        }
+
+        function updateHeader() {
+            document.getElementById('headerTitle').textContent = `👋 Welcome to ${APP.company}`;
+            document.getElementById('headerSubtitle').textContent = `${getLocationName()} - Management`;
+            
+            // Show Alex Davis Care Group logo background if it's their company
+            if (APP.company === 'Alex Davis Care Group') {
+                document.body.classList.add('alex-davis-logged-in');
+            } else {
+                document.body.classList.remove('alex-davis-logged-in');
+            }
+        }
+
+        function resetHeader() {
+            document.getElementById('headerTitle').textContent = '👋 HelloHub';
+            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
+            
+            // Hide Alex Davis logo background
+            document.body.classList.remove('alex-davis-logged-in');
+        }
+
+        function getLocationName() {
+            const idx = parseInt(APP.currentBusiness.replace('loc-', ''));
+            return APP.locations[idx] || APP.currentBusiness;
+        }
+
+        function adminClick() {
+            APP.adminClicks++;
+            setTimeout(() => { APP.adminClicks = 0; }, 2000);
+            if (APP.adminClicks >= 3) {
+                APP.adminClicks = 0;
+                APP.currentBusiness = '';
+                APP.currentUserType = '';
+                document.getElementById('businessDropdown').value = '';
+                document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+                resetHeader();
+                showPage('businessSelect');
+            }
+        }
+
+        function logout() {
+            APP.currentBusiness = '';
+            APP.currentUserType = '';
+            APP.isLoggedIn = false;
+            APP.companyData = null;
+            APP.company = '';
+            APP.locations = [];
+            APP.dbUrl = '';
+            
+            document.getElementById('businessDropdown').innerHTML = '<option value="">-- Select Location --</option>';
+            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+            resetHeader();
+            showPage('loginPage');
+        }
+
+        function selectUserType(type) {
+            APP.currentUserType = type;
+            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.user-type-btn').classList.add('active');
+        }
+
+        function showAction(action) {
+            if (!APP.currentUserType) {
+                alert('Please select your user type first.');
+                return;
+            }
+            if (action === 'arriving') {
+                buildArrivalForm();
+                showPage('arrivingPage');
+            } else {
+                showPage('leavingPage');
+            }
+        }
+
+        function buildArrivalForm() {
+            const form = document.getElementById('arrivalForm');
+            let fields = '';
+            
+            if (APP.currentUserType === 'visitor') {
+                fields = `
+                    <div class="form-group">
+                        <label>First Name: <span class="required">*</span></label>
+                        <input type="text" id="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Surname: <span class="required">*</span></label>
+                        <input type="text" id="surname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="email" placeholder="example@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Mobile:</label>
+                        <input type="tel" id="mobile" placeholder="04XX XXX XXX">
+                    </div>
+                    <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
+                        <span class="required">*</span> Required fields
+                    </div>
+                `;
+            } else {
+                fields = `
+                    <div class="form-group">
+                        <label>First Name: <span class="required">*</span></label>
+                        <input type="text" id="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Surname: <span class="required">*</span></label>
+                        <input type="text" id="surname" required>
+                    </div>
+                    <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
+                        <span class="required">*</span> Required fields
+                    </div>
+                `;
+            }
+            
+            form.innerHTML = fields + `
+                <button class="btn btn-success" onclick="recordArrival()">💾 Record Arrival</button>
+                <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+            `;
+        }
+
+        function recordArrival() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const surname = document.getElementById('surname').value.trim();
+            
+            if (!firstName || !surname) {
+                alert('Please enter both first name and surname.');
+                return;
+            }
+
+            const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
+            const mobile = document.getElementById('mobile') ? document.getElementById('mobile').value.trim() : '';
+
+            const data = {
+                firstName: firstName,
+                surname: surname,
+                email: email || 'Not provided',
+                mobile: mobile || 'Not provided',
+                userType: APP.currentUserType,
+                location: getLocationName(),
+                businessId: APP.currentBusiness,
+                arrivalDate: new Date().toLocaleDateString(),
+                arrivalTime: new Date().toLocaleTimeString(),
+                status: 'arrived'
+            };
+
+            saveData(data);
+            showSuccess(`✅ Welcome, ${firstName}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
+        }
+
+        function recordDeparture() {
+            const firstName = document.getElementById('leaveFirst').value.trim();
+            const surname = document.getElementById('leaveLast').value.trim();
+            
+            if (!firstName || !surname) {
+                alert('Please enter both first name and surname.');
+                return;
+            }
+
+            const data = {
+                firstName: firstName,
+                surname: surname,
+                email: 'Not provided',
+                mobile: 'Not provided',
+                userType: APP.currentUserType,
+                location: getLocationName(),
+                businessId: APP.currentBusiness,
+                departureDate: new Date().toLocaleDateString(),
+                departureTime: new Date().toLocaleTimeString(),
+                status: 'departed'
+            };
+
+            saveData(data);
+            showSuccess(`👋 Goodbye, ${firstName}!`, 'Your departure has been recorded.');
+            
+            document.getElementById('leaveFirst').value = '';
+            document.getElementById('leaveLast').value = '';
+        }
+
+        function saveData(data) {
+            console.log('=== SAVING VISITOR DATA TO GOOGLE SHEETS ===');
+            console.log('Data to save:', data);
+            console.log('URL:', APP.dbUrl);
+            
+            // Primary save to Google Sheets
+            fetch(APP.dbUrl, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                console.log('✅ Google Sheets response received');
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            }).then(responseText => {
+                console.log('✅ Google Sheets Response:', responseText);
+                console.log('🎉 DATA SUCCESSFULLY SAVED TO GOOGLE SHEETS!');
+                
+                // Also save to localStorage as backup
+                saveToLocalStorage(data);
+                
+            }).catch(error => {
+                console.log('❌ Google Sheets save failed:', error);
+                console.log('💾 Saving to localStorage as backup...');
+                
+                // Fallback to localStorage
+                const success = saveToLocalStorage(data);
+                if (success) {
+                    console.log('✅ Saved to localStorage backup successfully');
+                } else {
+                    console.log('❌ Both Google Sheets and localStorage failed');
+                }
+            });
+        }
+
+        function saveToLocalStorage(data) {
+            try {
+                // Get existing data
+                const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
+                
+                // Add new visitor data with timestamp
+                const newVisitor = {
+                    ...data,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Add to beginning of array (most recent first)
+                existingData.unshift(newVisitor);
+                
+                // Save back to localStorage
+                localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
+                
+                console.log('✅ DATA SAVED TO LOCAL BACKUP');
+                console.log('💡 Data also available in Admin Dashboard');
+                
+                return true;
+            } catch (error) {
+                console.log('❌ localStorage save failed:', error);
+                return false;
+            }
+        }
+
+        // Function to read data from Google Sheets (for testing)
+        function getAllVisitors() {
+            console.log('To view visitor data, check your Google Sheet directly or use the localStorage backup:');
+            console.log('localStorage data:', JSON.parse(localStorage.getItem('visitorData') || '[]'));
+        }
+
+        function showSuccess(message, details) {
+            document.getElementById('successMsg').textContent = message;
+            document.getElementById('successDetails').textContent = details;
+            showPage('successPage');
+            startCountdown();
+        }
+
+        function startCountdown() {
+            let seconds = 5;
+            const countdownEl = document.getElementById('countdown');
+            
+            const updateCountdown = () => {
+                countdownEl.textContent = `Returning in ${seconds} seconds...`;
+                seconds--;
+                
+                if (seconds < 0) {
+                    APP.currentUserType = '';
+                    document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+                    showPage('userTypeSelect');
+                } else {
+                    setTimeout(updateCountdown, 1000);
+                }
+            };
+            
+            updateCountdown();
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function goBack() {
+            showPage('userTypeSelect');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
