@@ -68,11 +68,21 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         .header {
-            background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;
+            background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 40px 30px; text-align: center; border-radius: 20px 20px 0 0;
             position: relative;
         }
-        .header h1 { font-size: 16px; margin-bottom: 10px; opacity: 0.8; }
-        .header p { opacity: 1; font-size: 28px; font-weight: bold; }
+        .header h1 { font-size: 24px; margin-bottom: 8px; opacity: 0.9; font-weight: 600; }
+        .header p { opacity: 1; font-size: 36px; font-weight: bold; margin-bottom: 8px; }
+        .header .location-name { font-size: 42px; font-weight: bold; opacity: 1; margin-top: 8px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .header .company-logo {
+            max-height: 80px;
+            max-width: 280px;
+            width: auto;
+            height: auto;
+            margin-bottom: 20px;
+            object-fit: contain;
+            display: none;
+        }
         .content { padding: 40px; position: relative; min-height: 400px; }
         .admin-logo {
             position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
@@ -162,9 +172,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="alex-davis-logo.png" alt="Alex Davis Care Group Logo" class="header-logo" id="headerLogo" style="max-height: 60px; max-width: 200px; width: auto; height: auto; margin-bottom: 15px; object-fit: contain; display: none;" onmousedown="startLogoutTimer()" onmouseup="cancelLogoutTimer()" onmouseleave="cancelLogoutTimer()" ontouchstart="startLogoutTimer()" ontouchend="cancelLogoutTimer()">
+            <img src="alex-davis-logo.png" alt="Alex Davis Care Group Logo" class="company-logo" id="headerLogo">
             <h1 id="headerTitle">👋 HelloHub</h1>
             <p id="headerSubtitle">Visitor, Client & Staff Management</p>
+            <div id="locationName" class="location-name" style="display: none;"></div>
         </div>
         <div class="content">
             <div class="admin-logo" onclick="adminReset()">
@@ -317,9 +328,14 @@
             </div>
 
             <div id="successPage" class="page">
-                <div class="alert alert-success">
-                    <h3 id="successMsg"></h3>
-                    <p id="successDetails"></p>
+                <!-- Personal Message Box - Large and Eye-catching -->
+                <div class="alert" style="background: linear-gradient(135deg, #d4f6d4 0%, #c8e6c9 100%); color: #2e7d32; border: 2px solid #a5d6a7; padding: 25px; margin-bottom: 15px; font-size: 18px; font-weight: bold; text-align: center; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div id="successMsg" style="font-size: 20px; margin-bottom: 5px;"></div>
+                </div>
+                
+                <!-- System Message Box - Smaller and Subtle -->
+                <div class="alert" style="background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; padding: 12px; font-size: 13px; text-align: center; border-radius: 8px;">
+                    <div id="successDetails"></div>
                     <div id="countdown" class="countdown"></div>
                 </div>
             </div>
@@ -336,6 +352,11 @@
             adminClicks: 0
         };
         let currentDepartingVisitor = null;
+
+        // Google Sheets configuration
+        const VISITOR_CONFIG = {
+            googleSheetsUrl: 'https://script.google.com/macros/s/AKfycbxasgHvqyBS4BCDeH5Ipm3798X1mZyciwCuuVL20D-Z-8hol6jWfRKWUbqvuPMLyM2C/exec'
+        };
 
         function doLogin() {
             console.log('Login function called');
@@ -392,27 +413,53 @@
         function doSelectBusiness() {
             APP.currentBusiness = document.getElementById('businessDropdown').value;
             if (APP.currentBusiness) {
-                updateHeader();
+                updateHeader(); // This will now show the location name
                 showPage('userTypeSelect');
                 saveSessionState(); // Save state after everything is updated
             }
         }
 
         function updateHeader() {
-            document.getElementById('headerTitle').textContent = `👋 Welcome to ${APP.company}`;
-            document.getElementById('headerSubtitle').textContent = getLocationName();
-            
             const logo = document.getElementById('headerLogo');
+            const locationDiv = document.getElementById('locationName');
+            
             if (APP.company === 'Alex Davis Care Group') {
-                document.body.classList.add('alex-davis-logged-in');
-                logo.style.display = 'block'; // Show the header logo
+                // Show company branding when logged in
+                document.getElementById('headerTitle').textContent = `Alex Davis Care Group`;
+                document.getElementById('headerSubtitle').textContent = ``;
                 
-                // Add location-specific background class
-                const location = getLocationName().toLowerCase().replace(/\s+/g, '-');
-                document.body.classList.add(`location-${location}`);
+                // Show and setup logo with logout functionality
+                logo.style.display = 'block';
+                logo.onmousedown = startLogoutTimer;
+                logo.onmouseup = cancelLogoutTimer;
+                logo.onmouseleave = cancelLogoutTimer;
+                logo.ontouchstart = startLogoutTimer;
+                logo.ontouchend = cancelLogoutTimer;
+                
+                document.body.classList.add('alex-davis-logged-in');
+                
+                // Only show location name and background if location is selected
+                if (APP.currentBusiness) {
+                    const locationName = getLocationName();
+                    if (locationName) {
+                        locationDiv.textContent = locationName;
+                        locationDiv.style.display = 'block';
+                        
+                        // Add location-specific background class
+                        const location = locationName.toLowerCase().replace(/\s+/g, '-');
+                        document.body.classList.add(`location-${location}`);
+                    }
+                } else {
+                    // On location selection page - no location name yet
+                    locationDiv.style.display = 'none';
+                    document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+                }
             } else {
+                // Default state - not logged in
                 document.body.classList.remove('alex-davis-logged-in');
-                logo.style.display = 'none'; // Hide the header logo
+                document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+                logo.style.display = 'none';
+                locationDiv.style.display = 'none';
             }
         }
 
@@ -530,7 +577,7 @@
             };
 
             saveToStorage(data);
-            showSuccess(`✅ Welcome, ${firstName}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
+            showSuccess(`🎉 Welcome, ${firstName} ${surname}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
         }
 
         function doRecordDeparture() {
@@ -560,10 +607,10 @@
                 setupStarRatings();
             } else if (APP.currentUserType === 'staff') {
                 saveToStorage(currentDepartingVisitor);
-                showSuccess(`Thank you for today ${firstName}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
+                showSuccess(`😊 Thank you for today ${firstName} ${surname}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
             } else if (APP.currentUserType === 'client') {
                 saveToStorage(currentDepartingVisitor);
-                showSuccess(`We hope you had the best day ${firstName}, see you soon!`, 'Your departure has been recorded.');
+                showSuccess(`☀️ We hope you had the best day ${firstName} ${surname}, see you soon!`, 'Your departure has been recorded.');
             }
         }
 
@@ -647,19 +694,41 @@
             };
             
             saveToStorage(currentDepartingVisitor);
-            showSuccess(`Thank you for visiting ${currentDepartingVisitor.firstName}, we value your feedback about our home.`, 'Your departure and feedback have been recorded.');
+            showSuccess(`💝 Thank you for visiting ${currentDepartingVisitor.firstName} ${currentDepartingVisitor.surname}, we value your feedback about our home.`, 'Your departure and feedback have been recorded.');
         }
 
         function doSkipFeedback() {
             saveToStorage(currentDepartingVisitor);
-            showSuccess(`👋 Goodbye, ${currentDepartingVisitor.firstName}!`, 'Your departure has been recorded.');
+            showSuccess(`👋 Goodbye, ${currentDepartingVisitor.firstName} ${currentDepartingVisitor.surname}!`, 'Your departure has been recorded.');
         }
 
         function saveToStorage(data) {
             try {
+                // Save to localStorage as backup
                 const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
                 existingData.unshift(data);
                 localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
+                
+                // Also save to Google Sheets
+                fetch(VISITOR_CONFIG.googleSheetsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'add',
+                        data: data
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('✅ Data synced to Google Sheets');
+                })
+                .catch(error => {
+                    console.error('⚠️ Failed to sync to Google Sheets:', error);
+                    // Data is still saved locally, so continue normally
+                });
+                
                 console.log('Data saved successfully');
                 return true;
             } catch (error) {
@@ -668,9 +737,9 @@
             }
         }
 
-        function showSuccess(message, details) {
-            document.getElementById('successMsg').textContent = message;
-            document.getElementById('successDetails').textContent = details;
+        function showSuccess(personalMessage, systemMessage) {
+            document.getElementById('successMsg').textContent = personalMessage;
+            document.getElementById('successDetails').textContent = systemMessage;
             showPage('successPage');
             startCountdown();
         }
@@ -714,13 +783,23 @@
             APP.adminClicks++;
             setTimeout(() => { APP.adminClicks = 0; }, 2000);
             if (APP.adminClicks >= 3) {
+                // Clear location data
                 APP.currentBusiness = '';
                 APP.currentUserType = '';
                 document.getElementById('businessDropdown').value = '';
                 document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('headerTitle').textContent = '👋 HelloHub';
-                document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
-                document.body.classList.remove('alex-davis-logged-in');
+                
+                // Remove location backgrounds and reset location display
+                document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+                document.getElementById('locationName').style.display = 'none';
+                document.getElementById('locationName').textContent = '';
+                
+                // Update header to show company but no location
+                updateHeader();
+                
+                // Update session
+                saveSessionState();
+                
                 showPage('businessSelect');
             }
         }
