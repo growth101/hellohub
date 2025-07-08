@@ -989,65 +989,85 @@
                 try {
                     const sessionState = JSON.parse(savedSession);
                     
-                    // Only restore if we have a complete, valid session AND we're coming from within the app
-                    // If someone visits via direct link, start fresh
-                    const hasValidReferrer = document.referrer && document.referrer.includes(window.location.hostname);
+                    // Check if this is a fresh browser session (new tab/window or direct URL entry)
+                    const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
+                    
+                    // Mark this browser tab as active
+                    sessionStorage.setItem('hellohubActive', 'true');
+                    
+                    // Only restore if we have a complete, valid session
                     const hasCompleteSession = sessionState.isLoggedIn && 
                                               sessionState.company && 
                                               sessionState.currentBusiness && 
                                               sessionState.locations && 
                                               sessionState.locations.length > 0;
                     
-                    // Only restore session if:
-                    // 1. The session is complete AND
-                    // 2. User navigated here from within the app (not a direct link)
-                    if (hasCompleteSession && hasValidReferrer) {
-                        console.log('Restoring valid session from internal navigation:', sessionState);
-                        
-                        // Restore APP state
-                        APP.company = sessionState.company;
-                        APP.locations = sessionState.locations;
-                        APP.currentBusiness = sessionState.currentBusiness;
-                        APP.currentUserType = sessionState.currentUserType || '';
-                        
-                        // Restore departing visitor data if it exists
-                        if (sessionState.currentDepartingVisitor) {
-                            currentDepartingVisitor = sessionState.currentDepartingVisitor;
-                        }
-                        
-                        // Setup UI
-                        setupBusinessDropdown();
-                        document.getElementById('businessDropdown').value = APP.currentBusiness;
-                        updateHeader();
-                        
-                        // Restore user type selection if it exists
-                        if (APP.currentUserType) {
-                            document.querySelectorAll('.user-type-btn').forEach(btn => {
-                                btn.classList.remove('active');
-                                if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
-                                    btn.classList.add('active');
-                                }
-                            });
-                        }
-                        
-                        // Show the appropriate page
-                        if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
-                            showPageWithoutSaving(sessionState.currentPage);
+                    if (hasCompleteSession) {
+                        // If this is a new browser session, only restore to a safe page
+                        if (isNewBrowserSession) {
+                            console.log('New browser session detected, restoring to user type selection');
                             
-                            // If we're restoring to feedback page, setup star ratings
-                            if (sessionState.currentPage === 'feedbackPage') {
-                                setupStarRatings();
-                            }
-                        } else {
+                            // Restore basic session but go to safe page
+                            APP.company = sessionState.company;
+                            APP.locations = sessionState.locations;
+                            APP.currentBusiness = sessionState.currentBusiness;
+                            APP.currentUserType = ''; // Clear user type for new session
+                            
+                            // Setup UI
+                            setupBusinessDropdown();
+                            document.getElementById('businessDropdown').value = APP.currentBusiness;
+                            updateHeader();
+                            
+                            // Go to user type selection (safe page)
                             showPageWithoutSaving('userTypeSelect');
+                        } else {
+                            console.log('Same browser session, restoring full state:', sessionState);
+                            
+                            // Full restoration for browser refresh
+                            APP.company = sessionState.company;
+                            APP.locations = sessionState.locations;
+                            APP.currentBusiness = sessionState.currentBusiness;
+                            APP.currentUserType = sessionState.currentUserType || '';
+                            
+                            // Restore departing visitor data if it exists
+                            if (sessionState.currentDepartingVisitor) {
+                                currentDepartingVisitor = sessionState.currentDepartingVisitor;
+                            }
+                            
+                            // Setup UI
+                            setupBusinessDropdown();
+                            document.getElementById('businessDropdown').value = APP.currentBusiness;
+                            updateHeader();
+                            
+                            // Restore user type selection if it exists
+                            if (APP.currentUserType) {
+                                document.querySelectorAll('.user-type-btn').forEach(btn => {
+                                    btn.classList.remove('active');
+                                    if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
+                                        btn.classList.add('active');
+                                    }
+                                });
+                            }
+                            
+                            // Show the appropriate page
+                            if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
+                                showPageWithoutSaving(sessionState.currentPage);
+                                
+                                // If we're restoring to feedback page, setup star ratings
+                                if (sessionState.currentPage === 'feedbackPage') {
+                                    setupStarRatings();
+                                }
+                            } else {
+                                showPageWithoutSaving('userTypeSelect');
+                            }
                         }
                     } else {
-                        console.log('Invalid session or direct link access, starting fresh at login');
+                        console.log('Invalid or incomplete session, starting fresh');
                         localStorage.removeItem('hellohubSession');
                         resetToLoginPage();
                     }
                 } catch (error) {
-                    console.log('Error parsing session, clearing and starting fresh');
+                    console.log('Error parsing session, starting fresh');
                     localStorage.removeItem('hellohubSession');
                     resetToLoginPage();
                 }
