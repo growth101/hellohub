@@ -606,6 +606,7 @@
             if (APP.currentUserType === 'visitor') {
                 showPage('feedbackPage');
                 setupStarRatings();
+                saveSessionState(); // Save state when on feedback page
             } else if (APP.currentUserType === 'staff') {
                 saveToStorage(currentDepartingVisitor);
                 showSuccess(`😊 Thank you for today ${firstName} ${surname}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
@@ -965,7 +966,9 @@
                 currentBusiness: APP.currentBusiness,
                 currentUserType: APP.currentUserType,
                 isLoggedIn: APP.company !== '',
-                currentPage: getCurrentActivePage()
+                currentPage: getCurrentActivePage(),
+                // Save departing visitor data for feedback page restoration
+                currentDepartingVisitor: currentDepartingVisitor
             };
             localStorage.setItem('hellohubSession', JSON.stringify(sessionState));
         }
@@ -1001,6 +1004,11 @@
                         APP.currentBusiness = sessionState.currentBusiness;
                         APP.currentUserType = sessionState.currentUserType || '';
                         
+                        // Restore departing visitor data if it exists
+                        if (sessionState.currentDepartingVisitor) {
+                            currentDepartingVisitor = sessionState.currentDepartingVisitor;
+                        }
+                        
                         // Setup UI
                         setupBusinessDropdown();
                         document.getElementById('businessDropdown').value = APP.currentBusiness;
@@ -1019,6 +1027,11 @@
                         // Show the appropriate page
                         if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
                             showPageWithoutSaving(sessionState.currentPage);
+                            
+                            // If we're restoring to feedback page, setup star ratings
+                            if (sessionState.currentPage === 'feedbackPage') {
+                                setupStarRatings();
+                            }
                         } else {
                             showPageWithoutSaving('userTypeSelect');
                         }
