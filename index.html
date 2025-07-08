@@ -985,48 +985,39 @@
         // Restore session state from localStorage
         function restoreSessionState() {
             const savedSession = localStorage.getItem('hellohubSession');
+            
+            // Check if this is a fresh browser session (new tab/window)
+            const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
+            
+            // Mark this browser tab as active
+            sessionStorage.setItem('hellohubActive', 'true');
+            
             if (savedSession) {
                 try {
                     const sessionState = JSON.parse(savedSession);
                     
-                    // Check if this is a fresh browser session (new tab/window or direct URL entry)
-                    const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
-                    
-                    // Mark this browser tab as active
-                    sessionStorage.setItem('hellohubActive', 'true');
-                    
-                    // Only restore if we have a complete, valid session
+                    // Check if we have a complete, valid session
                     const hasCompleteSession = sessionState.isLoggedIn && 
                                               sessionState.company && 
-                                              sessionState.currentBusiness && 
                                               sessionState.locations && 
                                               sessionState.locations.length > 0;
                     
                     if (hasCompleteSession) {
-                        // If this is a new browser session, only restore to a safe page
+                        console.log('Valid session found. New browser session:', isNewBrowserSession);
+                        
                         if (isNewBrowserSession) {
-                            console.log('New browser session detected, restoring to user type selection');
-                            
-                            // Restore basic session but go to safe page
-                            APP.company = sessionState.company;
-                            APP.locations = sessionState.locations;
-                            APP.currentBusiness = sessionState.currentBusiness;
-                            APP.currentUserType = ''; // Clear user type for new session
-                            
-                            // Setup UI
-                            setupBusinessDropdown();
-                            document.getElementById('businessDropdown').value = APP.currentBusiness;
-                            updateHeader();
-                            
-                            // Go to user type selection (safe page)
-                            showPageWithoutSaving('userTypeSelect');
+                            // Fresh URL entry: Start at login page
+                            console.log('Fresh URL entry detected, starting at login page');
+                            localStorage.removeItem('hellohubSession');
+                            resetToLoginPage();
                         } else {
-                            console.log('Same browser session, restoring full state:', sessionState);
+                            // Browser refresh: Restore full state
+                            console.log('Browser refresh detected, restoring full state');
                             
-                            // Full restoration for browser refresh
+                            // Always restore the login and location data
                             APP.company = sessionState.company;
                             APP.locations = sessionState.locations;
-                            APP.currentBusiness = sessionState.currentBusiness;
+                            APP.currentBusiness = sessionState.currentBusiness || '';
                             APP.currentUserType = sessionState.currentUserType || '';
                             
                             // Restore departing visitor data if it exists
@@ -1036,8 +1027,10 @@
                             
                             // Setup UI
                             setupBusinessDropdown();
-                            document.getElementById('businessDropdown').value = APP.currentBusiness;
-                            updateHeader();
+                            if (APP.currentBusiness) {
+                                document.getElementById('businessDropdown').value = APP.currentBusiness;
+                                updateHeader();
+                            }
                             
                             // Restore user type selection if it exists
                             if (APP.currentUserType) {
@@ -1049,7 +1042,7 @@
                                 });
                             }
                             
-                            // Show the appropriate page
+                            // Restore exact page they were on
                             if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
                                 showPageWithoutSaving(sessionState.currentPage);
                                 
@@ -1058,7 +1051,12 @@
                                     setupStarRatings();
                                 }
                             } else {
-                                showPageWithoutSaving('userTypeSelect');
+                                // Default fallback for refresh
+                                if (APP.currentBusiness) {
+                                    showPageWithoutSaving('userTypeSelect');
+                                } else {
+                                    showPageWithoutSaving('businessSelect');
+                                }
                             }
                         }
                     } else {
