@@ -618,6 +618,17 @@
         function setupStarRatings() {
             const starRatings = document.querySelectorAll('.star-rating');
             
+            // First, reset all star ratings to fresh state
+            starRatings.forEach(rating => {
+                rating.dataset.selectedRating = '0'; // Reset to no rating
+                const stars = rating.querySelectorAll('.star');
+                stars.forEach(star => {
+                    star.classList.remove('selected');
+                    star.style.opacity = '0.3';
+                    star.style.transform = 'scale(1)';
+                });
+            });
+            
             starRatings.forEach(rating => {
                 const stars = rating.querySelectorAll('.star');
                 
