@@ -989,14 +989,20 @@
                 try {
                     const sessionState = JSON.parse(savedSession);
                     
-                    // Only restore if we have a complete, valid session
-                    if (sessionState.isLoggedIn && 
-                        sessionState.company && 
-                        sessionState.currentBusiness && 
-                        sessionState.locations && 
-                        sessionState.locations.length > 0) {
-                        
-                        console.log('Restoring valid session:', sessionState);
+                    // Only restore if we have a complete, valid session AND we're coming from within the app
+                    // If someone visits via direct link, start fresh
+                    const hasValidReferrer = document.referrer && document.referrer.includes(window.location.hostname);
+                    const hasCompleteSession = sessionState.isLoggedIn && 
+                                              sessionState.company && 
+                                              sessionState.currentBusiness && 
+                                              sessionState.locations && 
+                                              sessionState.locations.length > 0;
+                    
+                    // Only restore session if:
+                    // 1. The session is complete AND
+                    // 2. User navigated here from within the app (not a direct link)
+                    if (hasCompleteSession && hasValidReferrer) {
+                        console.log('Restoring valid session from internal navigation:', sessionState);
                         
                         // Restore APP state
                         APP.company = sessionState.company;
@@ -1036,7 +1042,7 @@
                             showPageWithoutSaving('userTypeSelect');
                         }
                     } else {
-                        console.log('Invalid or incomplete session, clearing and starting fresh');
+                        console.log('Invalid session or direct link access, starting fresh at login');
                         localStorage.removeItem('hellohubSession');
                         resetToLoginPage();
                     }
