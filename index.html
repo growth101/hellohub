@@ -353,9 +353,10 @@
         };
         let currentDepartingVisitor = null;
 
-        // Google Sheets configuration
+        // Supabase configuration
         const VISITOR_CONFIG = {
-            googleSheetsUrl: 'https://script.google.com/macros/s/AKfycbxasgHvqyBS4BCDeH5Ipm3798X1mZyciwCuuVL20D-Z-8hol6jWfRKWUbqvuPMLyM2C/exec'
+            supabaseUrl: 'https://obyzwhqaqyiqpeoefjgw.supabase.co',
+            supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ieXp3aHFhcXlpcXBlb2Vmamd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDY0MDAsImV4cCI6MjA2NzU4MjQwMH0.NaePwt-LGqNp4vc8TTcv3IyzFkamZtiHmvDLpDcliAc'
         };
 
         function doLogin() {
@@ -709,23 +710,67 @@
                 existingData.unshift(data);
                 localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
                 
-                // Also save to Google Sheets
-                fetch(VISITOR_CONFIG.googleSheetsUrl, {
+                // Also save to Supabase database
+                const supabaseData = {
+                    first_name: data.firstName,
+                    surname: data.surname,
+                    email: data.email || 'Not provided',
+                    mobile: data.mobile || 'Not provided',
+                    user_type: data.userType,
+                    location: data.location,
+                    status: data.status
+                };
+
+                // Only add arrival data if it exists
+                if (data.arrivalDate) {
+                    supabaseData.arrival_date = data.arrivalDate;
+                }
+                if (data.arrivalTime) {
+                    supabaseData.arrival_time = data.arrivalTime;
+                }
+
+                // Only add departure data if it exists  
+                if (data.departureDate) {
+                    supabaseData.departure_date = data.departureDate;
+                }
+                if (data.departureTime) {
+                    supabaseData.departure_time = data.departureTime;
+                }
+
+                // Only add feedback if it exists
+                if (data.feedback) {
+                    supabaseData.feedback_overall = data.feedback.overall;
+                    supabaseData.feedback_safety = data.feedback.safety;
+                    supabaseData.feedback_responsive = data.feedback.responsive;
+                    supabaseData.feedback_caring = data.feedback.caring;
+                    supabaseData.feedback_leadership = data.feedback.leadership;
+                    supabaseData.feedback_effectiveness = data.feedback.effectiveness;
+                    supabaseData.feedback_average = calculateAverageRating(data.feedback);
+                    supabaseData.feedback_comments = data.feedback.additionalComments || 'No additional comments';
+                }
+                
+                console.log('Sending to Supabase:', supabaseData);
+                
+                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/visitors`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'add',
-                        data: data
-                    })
+                    body: JSON.stringify(supabaseData)
                 })
-                .then(response => response.json())
-                .then(result => {
-                    console.log('✅ Data synced to Google Sheets');
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Data synced to Supabase');
+                    } else {
+                        return response.text().then(text => {
+                            console.log('⚠️ Supabase sync failed:', response.status, text);
+                        });
+                    }
                 })
                 .catch(error => {
-                    console.error('⚠️ Failed to sync to Google Sheets:', error);
+                    console.error('⚠️ Supabase sync failed:', error);
                     // Data is still saved locally, so continue normally
                 });
                 
