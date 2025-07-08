@@ -745,24 +745,41 @@
                     supabaseData.feedback_caring = data.feedback.caring;
                     supabaseData.feedback_leadership = data.feedback.leadership;
                     supabaseData.feedback_effectiveness = data.feedback.effectiveness;
-                    supabaseData.feedback_average = calculateAverageRating(data.feedback);
+                    
+                    // Calculate average rating manually
+                    const ratings = [
+                        data.feedback.overall,
+                        data.feedback.safety,
+                        data.feedback.responsive,
+                        data.feedback.caring,
+                        data.feedback.leadership,
+                        data.feedback.effectiveness
+                    ].filter(rating => rating > 0);
+                    
+                    const avgRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
+                    
+                    supabaseData.feedback_average = avgRating;
                     supabaseData.feedback_comments = data.feedback.additionalComments || 'No additional comments';
                 }
                 
-                console.log('Sending to Supabase:', supabaseData);
+                console.log('Sending to Supabase:', JSON.stringify(supabaseData, null, 2));
                 
                 fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/visitors`, {
                     method: 'POST',
                     headers: {
                         'apikey': VISITOR_CONFIG.supabaseAnonKey,
                         'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
                     },
                     body: JSON.stringify(supabaseData)
                 })
                 .then(response => {
+                    console.log('Supabase response status:', response.status);
                     if (response.ok) {
-                        console.log('✅ Data synced to Supabase');
+                        return response.json().then(result => {
+                            console.log('✅ Data synced to Supabase successfully:', result);
+                        });
                     } else {
                         return response.text().then(text => {
                             console.log('⚠️ Supabase sync failed:', response.status, text);
@@ -774,7 +791,7 @@
                     // Data is still saved locally, so continue normally
                 });
                 
-                console.log('Data saved successfully');
+                console.log('Data saved successfully to localStorage');
                 return true;
             } catch (error) {
                 console.log('Save failed:', error);
@@ -955,17 +972,25 @@
         function restoreSessionState() {
             const savedSession = localStorage.getItem('hellohubSession');
             if (savedSession) {
-                const sessionState = JSON.parse(savedSession);
-                
-                if (sessionState.isLoggedIn && sessionState.company) {
-                    // Restore APP state
-                    APP.company = sessionState.company;
-                    APP.locations = sessionState.locations || [];
-                    APP.currentBusiness = sessionState.currentBusiness || '';
-                    APP.currentUserType = sessionState.currentUserType || '';
+                try {
+                    const sessionState = JSON.parse(savedSession);
                     
-                    // Update UI to match saved state
-                    if (APP.company && APP.currentBusiness) {
+                    // Only restore if we have a complete, valid session
+                    if (sessionState.isLoggedIn && 
+                        sessionState.company && 
+                        sessionState.currentBusiness && 
+                        sessionState.locations && 
+                        sessionState.locations.length > 0) {
+                        
+                        console.log('Restoring valid session:', sessionState);
+                        
+                        // Restore APP state
+                        APP.company = sessionState.company;
+                        APP.locations = sessionState.locations;
+                        APP.currentBusiness = sessionState.currentBusiness;
+                        APP.currentUserType = sessionState.currentUserType || '';
+                        
+                        // Setup UI
                         setupBusinessDropdown();
                         document.getElementById('businessDropdown').value = APP.currentBusiness;
                         updateHeader();
@@ -986,12 +1011,38 @@
                         } else {
                             showPageWithoutSaving('userTypeSelect');
                         }
-                    } else if (APP.company) {
-                        setupBusinessDropdown();
-                        showPageWithoutSaving('businessSelect');
+                    } else {
+                        console.log('Invalid or incomplete session, clearing and starting fresh');
+                        localStorage.removeItem('hellohubSession');
+                        resetToLoginPage();
                     }
+                } catch (error) {
+                    console.log('Error parsing session, clearing and starting fresh');
+                    localStorage.removeItem('hellohubSession');
+                    resetToLoginPage();
                 }
+            } else {
+                console.log('No saved session, starting at login page');
+                resetToLoginPage();
             }
+        }
+
+        // Reset everything to login page state
+        function resetToLoginPage() {
+            APP.company = '';
+            APP.locations = [];
+            APP.currentBusiness = '';
+            APP.currentUserType = '';
+            
+            document.getElementById('headerTitle').textContent = '👋 HelloHub';
+            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
+            document.getElementById('locationName').style.display = 'none';
+            document.getElementById('headerLogo').style.display = 'none';
+            
+            document.body.classList.remove('alex-davis-logged-in');
+            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+            
+            showPageWithoutSaving('loginPage');
         }
 
         // Helper function to show page without saving state (to avoid recursion during restore)
