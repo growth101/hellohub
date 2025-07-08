@@ -382,7 +382,7 @@
                 
                 setupBusinessDropdown();
                 showPage('businessSelect');
-                saveSessionState(); // Save state after successful login
+                saveSessionState(); // Save state when going to location selection
             } else {
                 console.log('Login failed');
                 showError('Invalid email or password.');
@@ -1042,7 +1042,7 @@
                                 });
                             }
                             
-                            // Restore exact page they were on
+                            // Restore exact page they were on - this is the key fix
                             if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
                                 showPageWithoutSaving(sessionState.currentPage);
                                 
@@ -1051,7 +1051,7 @@
                                     setupStarRatings();
                                 }
                             } else {
-                                // Default fallback for refresh
+                                // Only use fallback logic if no currentPage was saved
                                 if (APP.currentBusiness) {
                                     showPageWithoutSaving('userTypeSelect');
                                 } else {
