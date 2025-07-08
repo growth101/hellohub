@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelloHub - Visitor Management</title>
-    <link rel="icon" href="favicon.png" type="image/png">
+    <title>HelloHub - Alex Davis Care Group</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -12,7 +11,38 @@
             background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
             min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
             position: relative;
+            transition: all 0.5s ease;
         }
+        
+        /* Background images for each location */
+        body.location-the-royal {
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('the-royal-exterior.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        body.location-the-crown {
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('the-crown-exterior.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        body.location-seabreeze {
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('seabreeze-exterior.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        /* Remove the old Alex Davis logo background when location photos are shown */
+        body.location-the-royal::before,
+        body.location-the-crown::before,
+        body.location-seabreeze::before {
+            display: none;
+        }
+        
         body.alex-davis-logged-in::before {
             content: '';
             position: fixed;
@@ -32,16 +62,17 @@
             pointer-events: none;
         }
         .container {
-            background: rgba(255, 255, 255, 0.7); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            background: rgba(255, 255, 255, 0.9); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             max-width: 500px; width: 100%; min-height: 600px; position: relative;
-            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         .header {
             background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;
+            position: relative;
         }
-        .header h1 { font-size: 24px; margin-bottom: 10px; }
-        .header p { opacity: 0.9; font-size: 14px; }
+        .header h1 { font-size: 16px; margin-bottom: 10px; opacity: 0.8; }
+        .header p { opacity: 1; font-size: 28px; font-weight: bold; }
         .content { padding: 40px; position: relative; min-height: 400px; }
         .admin-logo {
             position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
@@ -79,16 +110,64 @@
         .alert-success { background: #d1f2eb; color: #00695c; border: 1px solid #a7f3d0; }
         .alert-info { background: #e3f2fd; color: #0277bd; border: 1px solid #b3e5fc; }
         .countdown { margin-top: 15px; font-size: 16px; font-weight: bold; color: #0277bd; }
+        
+        /* Feedback Form Styles */
+        .feedback-question {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        
+        .feedback-label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        
+        .star-rating {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .star {
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.3;
+            transform: scale(1);
+        }
+        
+        .star:hover {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+        
+        .star.selected {
+            opacity: 1;
+            filter: drop-shadow(0 2px 4px rgba(255, 193, 7, 0.3));
+        }
+        
+        .star.selected ~ .star {
+            opacity: 0.3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <img src="alex-davis-logo.png" alt="Alex Davis Care Group Logo" class="header-logo" id="headerLogo">
             <h1 id="headerTitle">👋 HelloHub</h1>
             <p id="headerSubtitle">Visitor, Client & Staff Management</p>
         </div>
         <div class="content">
-            <div class="admin-logo" onclick="adminClick()">
+            <div class="admin-logo" onclick="adminReset()">
                 <svg width="80" height="50" viewBox="0 0 400 200">
                     <rect x="20" y="40" width="200" height="120" rx="25" ry="25" fill="#000000"/>
                     <circle cx="120" cy="85" r="15" fill="white"/>
@@ -109,7 +188,7 @@
                     <label for="password">Password:</label>
                     <input type="password" id="password" placeholder="Enter your password">
                 </div>
-                <button class="btn btn-primary" onclick="validateLogin()">🔐 Login</button>
+                <button class="btn btn-primary" onclick="doLogin()">🔐 Login</button>
                 <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
             </div>
 
@@ -117,7 +196,7 @@
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Select Location</h2>
                 <div class="form-group">
                     <label for="businessDropdown">Choose Business Location:</label>
-                    <select id="businessDropdown" onchange="selectBusiness()">
+                    <select id="businessDropdown" onchange="doSelectBusiness()">
                         <option value="">-- Select Location --</option>
                     </select>
                 </div>
@@ -126,22 +205,22 @@
             <div id="userTypeSelect" class="page">
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">I am a...</h2>
                 <div class="user-type-selection">
-                    <div class="user-type-btn" onclick="selectUserType('visitor')">
+                    <div class="user-type-btn" onclick="doSelectUserType('visitor')">
                         <div style="font-size: 24px; margin-bottom: 10px;">👥</div>
                         <div style="font-weight: bold;">Visitor</div>
                     </div>
-                    <div class="user-type-btn" onclick="selectUserType('client')">
+                    <div class="user-type-btn" onclick="doSelectUserType('client')">
                         <div style="font-size: 24px; margin-bottom: 10px;">🤝</div>
                         <div style="font-weight: bold;">Client</div>
                     </div>
-                    <div class="user-type-btn" onclick="selectUserType('staff')">
+                    <div class="user-type-btn" onclick="doSelectUserType('staff')">
                         <div style="font-size: 24px; margin-bottom: 10px;">👨‍💼</div>
                         <div style="font-weight: bold;">Staff</div>
                     </div>
                 </div>
                 <div style="display: flex; gap: 15px;">
-                    <button class="btn btn-primary" onclick="showAction('arriving')">Arriving</button>
-                    <button class="btn btn-warning" onclick="showAction('leaving')">Leaving</button>
+                    <button class="btn btn-primary" onclick="doShowAction('arriving')">Arriving</button>
+                    <button class="btn btn-warning" onclick="doShowAction('leaving')">Leaving</button>
                 </div>
             </div>
 
@@ -151,21 +230,90 @@
             </div>
 
             <div id="leavingPage" class="page">
-                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
-                <div class="alert alert-info">Enter your name to record departure:</div>
-                <div class="form-group">
-                    <label for="leaveFirst">First Name: <span class="required">*</span></label>
-                    <input type="text" id="leaveFirst" required>
-                </div>
-                <div class="form-group">
-                    <label for="leaveLast">Surname: <span class="required">*</span></label>
-                    <input type="text" id="leaveLast" required>
-                </div>
-                <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
-                    <span class="required">*</span> Required fields
-                </div>
-                <button class="btn btn-warning" onclick="recordDeparture()">Record Departure</button>
-                <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+                <!-- Content will be dynamically generated -->
+            </div>
+
+            <div id="feedbackPage" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Your Feedback Matters</h2>
+                <div class="alert alert-info">Please rate the care home in terms of number of stars, with 5 stars being best</div>
+                
+                <form id="feedbackForm">
+                    <div class="feedback-question">
+                        <label class="feedback-label">How would you rate the care home overall?</label>
+                        <div class="star-rating" data-question="overall">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you feel the care home keeps people safe?</label>
+                        <div class="star-rating" data-question="safety">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you feel the care home is responsive to people's needs?</label>
+                        <div class="star-rating" data-question="responsive">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you feel the care home is caring towards people?</label>
+                        <div class="star-rating" data-question="caring">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you feel the care home is well-led?</label>
+                        <div class="star-rating" data-question="leadership">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you feel the care provided is effective?</label>
+                        <div class="star-rating" data-question="effectiveness">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-question">
+                        <label class="feedback-label">Do you have any other feedback about your visit?</label>
+                        <textarea id="additionalFeedback" placeholder="Please share any additional comments..." 
+                                rows="4" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: Arial, sans-serif; font-size: 14px; resize: vertical; margin-top: 8px;"></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 30px;">
+                        <button type="button" class="btn btn-success" onclick="doSubmitFeedback()">✅ Submit Feedback</button>
+                    </div>
+                </form>
             </div>
 
             <div id="successPage" class="page">
@@ -178,110 +326,70 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
     <script>
-        const APP = {
-            company: "",
+        // Global variables
+        let APP = {
+            company: '',
             locations: [],
-            dbUrl: '',
             currentBusiness: '',
             currentUserType: '',
-            adminClicks: 0,
-            isLoggedIn: false,
-            companyData: null
+            adminClicks: 0
         };
+        let currentDepartingVisitor = null;
 
-        // Company database - in production, this would be stored securely on your server
-        const COMPANIES = {
-            'office@alexdavis.co.uk': {
-                password: 'office927',
-                companyName: 'Alex Davis Care Group',
-                locations: ['The Royal', 'The Crown', 'Seabreeze'],
-                dbUrl: 'https://script.google.com/macros/s/AKfycbzunnWtsyquoYdCn1jFKvxIlRxv59U7W5up2QEreQ3Eg2HqA7SIGqGY2GTb-wnIeWIv/exec'
-            },
-            'manager@xyztech.com': {
-                password: 'xyz789tech',
-                companyName: 'XYZ Technology Solutions',
-                locations: ['Head Office - Silicon Valley', 'Development Center - Austin', 'Support Hub - Denver'],
-                dbUrl: 'https://script.google.com/macros/s/DIFFERENT_GOOGLE_SHEETS_URL_FOR_XYZ/exec'
-            },
-            'contact@greenenv.com': {
-                password: 'green456env',
-                companyName: 'Green Environmental Services',
-                locations: ['Corporate HQ - Portland', 'Lab Facility - Seattle', 'Field Office - Vancouver'],
-                dbUrl: 'https://script.google.com/macros/s/ANOTHER_GOOGLE_SHEETS_URL_FOR_GREEN/exec'
-            }
-        };
-
-        function validateLogin() {
-            const emailAddress = document.getElementById('emailAddress').value.trim().toLowerCase();
+        // Login function
+        function doLogin() {
+            console.log('Login function called');
+            const email = document.getElementById('emailAddress').value.trim().toLowerCase();
             const password = document.getElementById('password').value.trim();
-            const errorDiv = document.getElementById('loginError');
             
-            if (!emailAddress || !password) {
-                showLoginError('Please enter both email address and password.');
+            console.log('Attempting login with:', email, password);
+            
+            if (!email || !password) {
+                showError('Please enter both email and password.');
                 return;
             }
             
-            if (COMPANIES[emailAddress] && COMPANIES[emailAddress].password === password) {
-                // Successful login
-                APP.companyData = COMPANIES[emailAddress];
-                APP.company = APP.companyData.companyName;
-                APP.locations = APP.companyData.locations;
-                APP.dbUrl = APP.companyData.dbUrl;
-                APP.isLoggedIn = true;
+            if (email === 'office@alexdavis.co.uk' && password === 'office927') {
+                console.log('Login successful!');
+                APP.company = 'Alex Davis Care Group';
+                APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
                 
-                // Clear login form
                 document.getElementById('emailAddress').value = '';
                 document.getElementById('password').value = '';
-                errorDiv.style.display = 'none';
+                hideError();
                 
-                // Initialize business selection
-                initBusinessSelection();
+                setupBusinessDropdown();
                 showPage('businessSelect');
             } else {
-                showLoginError('Invalid email address or password. Please try again.');
+                console.log('Login failed');
+                showError('Invalid email or password.');
             }
         }
 
-        function showLoginError(message) {
+        function showError(message) {
             const errorDiv = document.getElementById('loginError');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
         }
 
-        function initBusinessSelection() {
+        function hideError() {
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function setupBusinessDropdown() {
             const dropdown = document.getElementById('businessDropdown');
-            // Clear existing options
             dropdown.innerHTML = '<option value="">-- Select Location --</option>';
             
-            // Add company-specific locations
             APP.locations.forEach((loc, i) => {
                 const opt = document.createElement('option');
                 opt.value = `loc-${i}`;
                 opt.textContent = loc;
                 dropdown.appendChild(opt);
             });
-            autoSelect();
         }
 
-        function init() {
-            // Start with login page - no longer auto-populate locations
-            showPage('loginPage');
-        }
-
-        function autoSelect() {
-            const dropdown = document.getElementById('businessDropdown');
-            if (APP.locations.length > 0) {
-                dropdown.value = 'loc-0';
-                selectBusiness();
-            }
-        }
-
-        function selectBusiness() {
+        function doSelectBusiness() {
             APP.currentBusiness = document.getElementById('businessDropdown').value;
             if (APP.currentBusiness) {
                 updateHeader();
@@ -291,73 +399,44 @@
 
         function updateHeader() {
             document.getElementById('headerTitle').textContent = `👋 Welcome to ${APP.company}`;
-            document.getElementById('headerSubtitle').textContent = `${getLocationName()} - Management`;
+            document.getElementById('headerSubtitle').textContent = getLocationName();
             
-            // Show Alex Davis Care Group logo background if it's their company
+            const logo = document.getElementById('headerLogo');
             if (APP.company === 'Alex Davis Care Group') {
                 document.body.classList.add('alex-davis-logged-in');
+                logo.style.display = 'block'; // Show the header logo
+                
+                // Add location-specific background class
+                const location = getLocationName().toLowerCase().replace(/\s+/g, '-');
+                document.body.classList.add(`location-${location}`);
             } else {
                 document.body.classList.remove('alex-davis-logged-in');
+                logo.style.display = 'none'; // Hide the header logo
             }
-        }
-
-        function resetHeader() {
-            document.getElementById('headerTitle').textContent = '👋 HelloHub';
-            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
-            
-            // Hide Alex Davis logo background
-            document.body.classList.remove('alex-davis-logged-in');
         }
 
         function getLocationName() {
             const idx = parseInt(APP.currentBusiness.replace('loc-', ''));
-            return APP.locations[idx] || APP.currentBusiness;
+            return APP.locations[idx] || '';
         }
 
-        function adminClick() {
-            APP.adminClicks++;
-            setTimeout(() => { APP.adminClicks = 0; }, 2000);
-            if (APP.adminClicks >= 3) {
-                APP.adminClicks = 0;
-                APP.currentBusiness = '';
-                APP.currentUserType = '';
-                document.getElementById('businessDropdown').value = '';
-                document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-                resetHeader();
-                showPage('businessSelect');
-            }
-        }
-
-        function logout() {
-            APP.currentBusiness = '';
-            APP.currentUserType = '';
-            APP.isLoggedIn = false;
-            APP.companyData = null;
-            APP.company = '';
-            APP.locations = [];
-            APP.dbUrl = '';
-            
-            document.getElementById('businessDropdown').innerHTML = '<option value="">-- Select Location --</option>';
-            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-            resetHeader();
-            showPage('loginPage');
-        }
-
-        function selectUserType(type) {
+        function doSelectUserType(type) {
             APP.currentUserType = type;
             document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
             event.target.closest('.user-type-btn').classList.add('active');
         }
 
-        function showAction(action) {
+        function doShowAction(action) {
             if (!APP.currentUserType) {
                 alert('Please select your user type first.');
                 return;
             }
+            
             if (action === 'arriving') {
                 buildArrivalForm();
                 showPage('arrivingPage');
             } else {
+                buildDepartureForm();
                 showPage('leavingPage');
             }
         }
@@ -384,9 +463,6 @@
                         <label>Mobile:</label>
                         <input type="tel" id="mobile" placeholder="04XX XXX XXX">
                     </div>
-                    <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
-                        <span class="required">*</span> Required fields
-                    </div>
                 `;
             } else {
                 fields = `
@@ -398,19 +474,33 @@
                         <label>Surname: <span class="required">*</span></label>
                         <input type="text" id="surname" required>
                     </div>
-                    <div style="margin-bottom: 20px; font-size: 12px; color: #666;">
-                        <span class="required">*</span> Required fields
-                    </div>
                 `;
             }
             
             form.innerHTML = fields + `
-                <button class="btn btn-success" onclick="recordArrival()">💾 Record Arrival</button>
-                <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+                <button class="btn btn-success" onclick="doRecordArrival()">💾 Record Arrival</button>
+                <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
             `;
         }
 
-        function recordArrival() {
+        function buildDepartureForm() {
+            document.getElementById('leavingPage').innerHTML = `
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                <div class="alert alert-info">Enter your name to record departure:</div>
+                <div class="form-group">
+                    <label for="leaveFirst">First Name: <span class="required">*</span></label>
+                    <input type="text" id="leaveFirst" required>
+                </div>
+                <div class="form-group">
+                    <label for="leaveLast">Surname: <span class="required">*</span></label>
+                    <input type="text" id="leaveLast" required>
+                </div>
+                <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
+                <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+            `;
+        }
+
+        function doRecordArrival() {
             const firstName = document.getElementById('firstName').value.trim();
             const surname = document.getElementById('surname').value.trim();
             
@@ -429,17 +519,17 @@
                 mobile: mobile || 'Not provided',
                 userType: APP.currentUserType,
                 location: getLocationName(),
-                businessId: APP.currentBusiness,
                 arrivalDate: new Date().toLocaleDateString(),
                 arrivalTime: new Date().toLocaleTimeString(),
-                status: 'arrived'
+                status: 'arrived',
+                timestamp: new Date().toISOString()
             };
 
-            saveData(data);
+            saveToStorage(data);
             showSuccess(`✅ Welcome, ${firstName}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
         }
 
-        function recordDeparture() {
+        function doRecordDeparture() {
             const firstName = document.getElementById('leaveFirst').value.trim();
             const surname = document.getElementById('leaveLast').value.trim();
             
@@ -448,101 +538,130 @@
                 return;
             }
 
-            const data = {
+            currentDepartingVisitor = {
                 firstName: firstName,
                 surname: surname,
                 email: 'Not provided',
                 mobile: 'Not provided',
                 userType: APP.currentUserType,
                 location: getLocationName(),
-                businessId: APP.currentBusiness,
                 departureDate: new Date().toLocaleDateString(),
                 departureTime: new Date().toLocaleTimeString(),
-                status: 'departed'
+                status: 'departed',
+                timestamp: new Date().toISOString()
             };
 
-            saveData(data);
-            showSuccess(`👋 Goodbye, ${firstName}!`, 'Your departure has been recorded.');
-            
-            document.getElementById('leaveFirst').value = '';
-            document.getElementById('leaveLast').value = '';
-        }
-
-        function saveData(data) {
-            console.log('=== SAVING VISITOR DATA TO GOOGLE SHEETS ===');
-            console.log('Data to save:', data);
-            console.log('URL:', APP.dbUrl);
-            
-            // Primary save to Google Sheets
-            fetch(APP.dbUrl, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }).then(response => {
-                console.log('✅ Google Sheets response received');
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
-                
-                if (response.ok) {
-                    return response.text();
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-            }).then(responseText => {
-                console.log('✅ Google Sheets Response:', responseText);
-                console.log('🎉 DATA SUCCESSFULLY SAVED TO GOOGLE SHEETS!');
-                
-                // Also save to localStorage as backup
-                saveToLocalStorage(data);
-                
-            }).catch(error => {
-                console.log('❌ Google Sheets save failed:', error);
-                console.log('💾 Saving to localStorage as backup...');
-                
-                // Fallback to localStorage
-                const success = saveToLocalStorage(data);
-                if (success) {
-                    console.log('✅ Saved to localStorage backup successfully');
-                } else {
-                    console.log('❌ Both Google Sheets and localStorage failed');
-                }
-            });
-        }
-
-        function saveToLocalStorage(data) {
-            try {
-                // Get existing data
-                const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
-                
-                // Add new visitor data with timestamp
-                const newVisitor = {
-                    ...data,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // Add to beginning of array (most recent first)
-                existingData.unshift(newVisitor);
-                
-                // Save back to localStorage
-                localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
-                
-                console.log('✅ DATA SAVED TO LOCAL BACKUP');
-                console.log('💡 Data also available in Admin Dashboard');
-                
-                return true;
-            } catch (error) {
-                console.log('❌ localStorage save failed:', error);
-                return false;
+            if (APP.currentUserType === 'visitor') {
+                showPage('feedbackPage');
+                setupStarRatings();
+            } else if (APP.currentUserType === 'staff') {
+                saveToStorage(currentDepartingVisitor);
+                showSuccess(`Thank you for today ${firstName}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
+            } else if (APP.currentUserType === 'client') {
+                saveToStorage(currentDepartingVisitor);
+                showSuccess(`We hope you had the best day ${firstName}, see you soon!`, 'Your departure has been recorded.');
             }
         }
 
-        // Function to read data from Google Sheets (for testing)
-        function getAllVisitors() {
-            console.log('To view visitor data, check your Google Sheet directly or use the localStorage backup:');
-            console.log('localStorage data:', JSON.parse(localStorage.getItem('visitorData') || '[]'));
+        function setupStarRatings() {
+            const starRatings = document.querySelectorAll('.star-rating');
+            
+            starRatings.forEach(rating => {
+                const stars = rating.querySelectorAll('.star');
+                
+                stars.forEach((star, index) => {
+                    star.addEventListener('click', function() {
+                        const selectedRating = parseInt(this.dataset.rating);
+                        
+                        // Clear all stars first
+                        stars.forEach(s => s.classList.remove('selected'));
+                        
+                        // Light up all stars from 1 to the selected rating
+                        for (let i = 0; i < selectedRating; i++) {
+                            stars[i].classList.add('selected');
+                        }
+                        
+                        // Store the rating
+                        rating.dataset.selectedRating = selectedRating;
+                        
+                        console.log(`Rated ${rating.dataset.question}: ${selectedRating} stars`);
+                    });
+                    
+                    // Hover effect - show preview of what would be selected
+                    star.addEventListener('mouseenter', function() {
+                        const hoverRating = parseInt(this.dataset.rating);
+                        stars.forEach((s, i) => {
+                            if (i < hoverRating) {
+                                s.style.opacity = '0.8';
+                                s.style.transform = 'scale(1.05)';
+                            } else {
+                                s.style.opacity = '0.3';
+                                s.style.transform = 'scale(1)';
+                            }
+                        });
+                    });
+                    
+                    // Reset hover effect
+                    star.addEventListener('mouseleave', function() {
+                        const selectedRating = rating.dataset.selectedRating || 0;
+                        stars.forEach((s, i) => {
+                            if (i < selectedRating) {
+                                s.style.opacity = '1';
+                                s.style.transform = 'scale(1)';
+                                s.classList.add('selected');
+                            } else {
+                                s.style.opacity = '0.3';
+                                s.style.transform = 'scale(1)';
+                                s.classList.remove('selected');
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        function doSubmitFeedback() {
+            const ratings = {};
+            const starRatings = document.querySelectorAll('.star-rating');
+            
+            starRatings.forEach(rating => {
+                const questionName = rating.dataset.question;
+                const selectedRating = rating.dataset.selectedRating || 0;
+                ratings[questionName] = parseInt(selectedRating);
+            });
+            
+            const additionalFeedback = document.getElementById('additionalFeedback').value.trim();
+            
+            currentDepartingVisitor.feedback = {
+                overall: ratings.overall || 0,
+                safety: ratings.safety || 0,
+                responsive: ratings.responsive || 0,
+                caring: ratings.caring || 0,
+                leadership: ratings.leadership || 0,
+                effectiveness: ratings.effectiveness || 0,
+                additionalComments: additionalFeedback || 'No additional comments'
+            };
+            
+            saveToStorage(currentDepartingVisitor);
+            showSuccess(`Thank you for visiting ${currentDepartingVisitor.firstName}, we value your feedback about our home.`, 'Your departure and feedback have been recorded.');
+        }
+
+        function doSkipFeedback() {
+            saveToStorage(currentDepartingVisitor);
+            showSuccess(`👋 Goodbye, ${currentDepartingVisitor.firstName}!`, 'Your departure has been recorded.');
+        }
+
+        function saveToStorage(data) {
+            try {
+                const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
+                existingData.unshift(data);
+                localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
+                console.log('Data saved successfully');
+                return true;
+            } catch (error) {
+                console.log('Save failed:', error);
+                return false;
+            }
         }
 
         function showSuccess(message, details) {
@@ -577,11 +696,38 @@
             document.getElementById(pageId).classList.add('active');
         }
 
-        function goBack() {
+        function doGoBack() {
             showPage('userTypeSelect');
         }
 
-        document.addEventListener('DOMContentLoaded', init);
+        function adminReset() {
+            APP.adminClicks++;
+            setTimeout(() => { APP.adminClicks = 0; }, 2000);
+            if (APP.adminClicks >= 3) {
+                APP.currentBusiness = '';
+                APP.currentUserType = '';
+                document.getElementById('businessDropdown').value = '';
+                document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('headerTitle').textContent = '👋 HelloHub';
+                document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
+                document.body.classList.remove('alex-davis-logged-in');
+                showPage('businessSelect');
+            }
+        }
+
+        // Initialize when page loads
+        console.log('Script loaded successfully');
+        console.log('Login: office@alexdavis.co.uk / office927');
+        
+        // Add Enter key support
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('emailAddress').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') doLogin();
+            });
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') doLogin();
+            });
+        });
     </script>
 </body>
 </html>
