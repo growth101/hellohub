@@ -528,6 +528,10 @@
                     <div id="clientList" class="client-list">
                         <!-- Client cards will be populated here -->
                     </div>
+                    
+                    <div style="margin-top: 30px; text-align: center;">
+                        <button class="btn btn-primary" onclick="finishClientManagement()">✅ Done</button>
+                    </div>
                 </div>
             </div>
 
@@ -575,6 +579,73 @@
                 </div>
             </div>
 
+            <!-- Staff Management Page -->
+            <div id="staffManagementPage" class="page">
+                <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
+                    <div class="settings-icon" onclick="doGoBack()" style="position: static; margin: 0; background: #6c757d; color: white; border: 2px solid #5a6268; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">← Back</div>
+                    <div class="settings-icon" onclick="loadStaffProfiles()" style="position: static; margin: 0; background: #17a2b8; color: white; border: 2px solid #138496; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">🔄 Refresh</div>
+                </div>
+                
+                <h2 style="text-align: center; margin-bottom: 30px; margin-top: 60px; color: #333;">Staff Management</h2>
+                <div class="alert alert-info" id="staffLocationInfo">Managing staff for: <span id="currentStaffLocationSpan"></span></div>
+                
+                <div class="client-management">
+                    <div style="margin-bottom: 20px;">
+                        <button class="btn btn-success" onclick="showAddStaffForm()">➕ Add New Staff Member</button>
+                    </div>
+                    
+                    <div id="staffList" class="client-list">
+                        <!-- Staff cards will be populated here -->
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center;">
+                        <button class="btn btn-primary" onclick="finishStaffManagement()">✅ Done</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit Staff Form -->
+            <div id="addStaffPage" class="page">
+                <div style="position: absolute; top: 15px; right: 15px;">
+                    <div class="settings-icon" onclick="cancelAddStaff()" style="position: static; margin: 0; background: #6c757d; color: white; border: 2px solid #5a6268; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">← Back</div>
+                </div>
+                
+                <h2 style="text-align: center; margin-bottom: 30px; margin-top: 60px; color: #333;" id="staffFormTitle">Add New Staff Member</h2>
+                
+                <div class="form-group">
+                    <div class="photo-upload">
+                        <img id="staffPhotoPreview" class="photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E" alt="Staff Photo">
+                        <div class="upload-btn">
+                            <label for="staffPhoto" class="btn btn-secondary">📷 Choose Photo</label>
+                            <input type="file" id="staffPhoto" accept="image/*" onchange="previewStaffPhoto(event)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="staffFirstName">First Name: <span class="required">*</span></label>
+                    <input type="text" id="staffFirstName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="staffLastName">Last Name: <span class="required">*</span></label>
+                    <input type="text" id="staffLastName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="staffLocationSelect">Location: <span class="required">*</span></label>
+                    <select id="staffLocationSelect" required>
+                        <option value="">-- Select Location --</option>
+                        <option value="Seabreeze">Seabreeze</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn btn-success" onclick="saveStaffProfile()">💾 Save Staff Member</button>
+                    <button class="btn btn-secondary" onclick="cancelAddStaff()">❌ Cancel</button>
+                </div>
+            </div>
+
             <div id="successPage" class="page">
                 <!-- Personal Message Box - Large and Eye-catching -->
                 <div class="alert" style="background: linear-gradient(135deg, #d4f6d4 0%, #c8e6c9 100%); color: #2e7d32; border: 2px solid #a5d6a7; padding: 25px; margin-bottom: 15px; font-size: 18px; font-weight: bold; text-align: center; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
@@ -612,7 +683,9 @@
         };
         let currentDepartingVisitor = null;
         let editingClientId = null;
+        let editingStaffId = null;
         let clientProfiles = [];
+        let staffProfiles = [];
 
         // Supabase configuration
         const VISITOR_CONFIG = {
@@ -816,16 +889,38 @@
                     `;
                 }
             } else {
-                fields = `
-                    <div class="form-group">
-                        <label>First Name: <span class="required">*</span></label>
-                        <input type="text" id="firstName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Surname: <span class="required">*</span></label>
-                        <input type="text" id="surname" required>
-                    </div>
-                `;
+                // For staff at Seabreeze, show dropdown with photos
+                if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                    fields = `
+                        <div class="form-group">
+                            <label>Select Staff Member: <span class="required">*</span></label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div class="client-dropdown" style="flex: 1;">
+                                    <div class="client-select" id="staffSelect" onclick="toggleStaffOptions()">
+                                        Choose a staff member...
+                                    </div>
+                                    <div class="client-options" id="staffOptions">
+                                        <!-- Staff options will be populated here -->
+                                    </div>
+                                </div>
+                                <div class="settings-icon" onclick="showStaffSettings()" style="position: static; margin-top: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                            </div>
+                            <input type="hidden" id="selectedStaffId">
+                        </div>
+                    `;
+                } else {
+                    // Traditional text input for other locations
+                    fields = `
+                        <div class="form-group">
+                            <label>First Name: <span class="required">*</span></label>
+                            <input type="text" id="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Surname: <span class="required">*</span></label>
+                            <input type="text" id="surname" required>
+                        </div>
+                    `;
+                }
             }
             
             form.innerHTML = fields + `
@@ -837,6 +932,11 @@
             if (APP.currentUserType === 'client') {
                 populateClientOptions();
             }
+            
+            // Populate staff options if it's a staff form at Seabreeze
+            if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                populateStaffOptions();
+            }
         }
 
         function buildDepartureForm() {
@@ -846,7 +946,6 @@
             if (APP.currentUserType === 'client' && (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze')) {
                 document.getElementById('leavingPage').innerHTML = `
                     <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
-                    <div class="alert alert-info">Select your name to record departure:</div>
                     
                     <div class="form-group">
                         <label>Select Client: <span class="required">*</span></label>
@@ -871,22 +970,50 @@
                 // Populate departure client options
                 populateDepartureClientOptions();
             } else {
-                // Original departure form for other user types or locations
-                document.getElementById('leavingPage').innerHTML = `
-                    <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
-                    <div class="alert alert-info">Enter your name to record departure:</div>
-                    <div class="form-group">
-                        <label for="leaveFirst">First Name: <span class="required">*</span></label>
-                        <input type="text" id="leaveFirst" required autocomplete="off" oninput="showNameSuggestions()" onblur="hideNameSuggestions()" onkeydown="handleSuggestionKeyboard(event)">
-                        <div id="nameSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
-                    </div>
-                    <div class="form-group">
-                        <label for="leaveLast">Surname: <span class="required">*</span></label>
-                        <input type="text" id="leaveLast" required autocomplete="off">
-                    </div>
-                    <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
-                    <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
-                `;
+                // For staff departure at Seabreeze, show dropdown
+                if (APP.currentUserType === 'staff' && currentLocation === 'Seabreeze') {
+                    document.getElementById('leavingPage').innerHTML = `
+                        <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                        
+                        <div class="form-group">
+                            <label>Select Staff Member: <span class="required">*</span></label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div class="client-dropdown" style="flex: 1;">
+                                    <div class="client-select" id="departureStaffSelect" onclick="toggleDepartureStaffOptions()">
+                                        Choose a staff member...
+                                    </div>
+                                    <div class="client-options" id="departureStaffOptions">
+                                        <!-- Staff options will be populated here -->
+                                    </div>
+                                </div>
+                                <div class="settings-icon" onclick="showStaffSettings()" style="position: static; margin-top: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                            </div>
+                            <input type="hidden" id="selectedDepartureStaffId">
+                        </div>
+                        
+                        <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
+                        <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                    `;
+                    
+                    // Populate departure staff options
+                    populateDepartureStaffOptions();
+                } else {
+                    // Original departure form for other user types or locations
+                    document.getElementById('leavingPage').innerHTML = `
+                        <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                        <div class="form-group">
+                            <label for="leaveFirst">First Name: <span class="required">*</span></label>
+                            <input type="text" id="leaveFirst" required autocomplete="off" oninput="showNameSuggestions()" onblur="hideNameSuggestions()" onkeydown="handleSuggestionKeyboard(event)">
+                            <div id="nameSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="leaveLast">Surname: <span class="required">*</span></label>
+                            <input type="text" id="leaveLast" required autocomplete="off">
+                        </div>
+                        <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
+                        <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                    `;
+                }
             }
         }
 
@@ -970,6 +1097,398 @@
             }
         }
 
+        // Staff Management Functions (Similar to Client Management)
+        function loadStaffProfiles() {
+            const currentLocation = getLocationName();
+            if (!currentLocation || currentLocation !== 'Seabreeze') {
+                return Promise.resolve([]);
+            }
+
+            // Fetch from Supabase
+            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${currentLocation}&select=*`, {
+                method: 'GET',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                staffProfiles = data || [];
+                console.log('Loaded staff profiles:', staffProfiles);
+                return staffProfiles;
+            })
+            .catch(error => {
+                console.error('Error loading staff profiles:', error);
+                staffProfiles = [];
+                return [];
+            });
+        }
+
+        function populateStaffOptions() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (!optionsDiv) return;
+
+            // Ensure staff profiles are loaded before populating
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    populateStaffOptionsInternal();
+                });
+            } else {
+                populateStaffOptionsInternal();
+            }
+        }
+
+        function populateStaffOptionsInternal() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
+
+            if (locationStaff.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
+                return;
+            }
+
+            optionsDiv.innerHTML = '';
+            locationStaff.forEach(staff => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectStaff(staff);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleStaffOptions() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                populateStaffOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectStaff(staff) {
+            document.getElementById('staffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
+            document.getElementById('selectedStaffId').value = staff.id;
+            document.getElementById('staffOptions').style.display = 'none';
+        }
+
+        // Staff departure functions
+        function populateDepartureStaffOptions() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (!optionsDiv) return;
+
+            // Ensure staff profiles are loaded before populating
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    populateDepartureStaffOptionsInternal();
+                });
+            } else {
+                populateDepartureStaffOptionsInternal();
+            }
+        }
+
+        function populateDepartureStaffOptionsInternal() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
+
+            if (locationStaff.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
+                return;
+            }
+
+            optionsDiv.innerHTML = '';
+            locationStaff.forEach(staff => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectDepartureStaff(staff);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleDepartureStaffOptions() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                populateDepartureStaffOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectDepartureStaff(staff) {
+            document.getElementById('departureStaffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
+            document.getElementById('selectedDepartureStaffId').value = staff.id;
+            document.getElementById('departureStaffOptions').style.display = 'none';
+        }
+
+        function showStaffSettings() {
+            showPage('staffAuthPage');
+            saveSessionState();
+        }
+
+        // Staff Management Functions
+        function displayStaffList() {
+            const staffListDiv = document.getElementById('staffList');
+            const currentLocation = getLocationName();
+            
+            // Ensure staff profiles are loaded before displaying
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    displayStaffListInternal();
+                });
+            } else {
+                displayStaffListInternal();
+            }
+        }
+
+        function displayStaffListInternal() {
+            const staffListDiv = document.getElementById('staffList');
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
+
+            if (locationStaff.length === 0) {
+                staffListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No staff registered for this location yet.</div>';
+                return;
+            }
+
+            let html = '';
+            locationStaff.forEach(staff => {
+                html += `
+                    <div class="client-card">
+                        <img class="client-card-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                        <div class="client-card-info">
+                            <div class="client-card-name">${staff.first_name} ${staff.last_name}</div>
+                            <div class="client-card-location">${staff.location}</div>
+                        </div>
+                        <div class="client-card-actions">
+                            <button class="btn btn-primary btn-small" onclick="editStaff(${staff.id})">✏️ Edit</button>
+                            <button class="btn btn-warning btn-small" onclick="deleteStaff(${staff.id})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            staffListDiv.innerHTML = html;
+        }
+
+        function showAddStaffForm() {
+            editingStaffId = null;
+            document.getElementById('staffFormTitle').textContent = 'Add New Staff Member';
+            document.getElementById('staffFirstName').value = '';
+            document.getElementById('staffLastName').value = '';
+            document.getElementById('staffLocationSelect').value = getLocationName();
+            resetStaffPhotoPreview();
+            showPage('addStaffPage');
+            saveSessionState();
+        }
+
+        function editStaff(staffId) {
+            const staff = staffProfiles.find(s => s.id === staffId);
+            if (!staff) return;
+
+            editingStaffId = staffId;
+            document.getElementById('staffFormTitle').textContent = 'Edit Staff Member';
+            document.getElementById('staffFirstName').value = staff.first_name;
+            document.getElementById('staffLastName').value = staff.last_name;
+            document.getElementById('staffLocationSelect').value = staff.location;
+            
+            if (staff.photo_url) {
+                document.getElementById('staffPhotoPreview').src = staff.photo_url;
+            } else {
+                resetStaffPhotoPreview();
+            }
+            
+            showPage('addStaffPage');
+            saveSessionState();
+        }
+
+        function deleteStaff(staffId) {
+            const staff = staffProfiles.find(s => s.id === staffId);
+            if (!staff) return;
+
+            if (confirm(`Are you sure you want to delete ${staff.first_name} ${staff.last_name}?`)) {
+                // Remove from local array IMMEDIATELY
+                staffProfiles = staffProfiles.filter(s => s.id !== staffId);
+                displayStaffList();
+                
+                // Delete from Supabase in background
+                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?id=eq.${staffId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Staff member deleted from Supabase');
+                    } else {
+                        console.log('⚠️ Supabase delete failed, but local delete successful');
+                    }
+                })
+                .catch(error => {
+                    console.error('⚠️ Background delete failed:', error);
+                });
+            }
+        }
+
+        function previewStaffPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('staffPhotoPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function resetStaffPhotoPreview() {
+            document.getElementById('staffPhotoPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E";
+        }
+
+        function saveStaffProfile() {
+            const firstName = document.getElementById('staffFirstName').value.trim();
+            const lastName = document.getElementById('staffLastName').value.trim();
+            const location = document.getElementById('staffLocationSelect').value;
+            const photoFile = document.getElementById('staffPhoto').files[0];
+
+            if (!firstName || !lastName || !location) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const saveToDatabase = (photoUrl = null) => {
+                const staffData = {
+                    first_name: firstName,
+                    last_name: lastName,
+                    location: location,
+                    photo_url: photoUrl
+                };
+
+                if (editingStaffId) {
+                    // Update existing staff in local array IMMEDIATELY
+                    const index = staffProfiles.findIndex(s => s.id === editingStaffId);
+                    if (index !== -1) {
+                        staffProfiles[index] = { ...staffProfiles[index], ...staffData };
+                    }
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('staffManagementPage');
+                    displayStaffList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background (async)
+                    updateStaffInSupabase(editingStaffId, staffData);
+                } else {
+                    // Create temporary staff object with fake ID for immediate display
+                    const tempStaff = {
+                        id: Date.now(), // Temporary ID
+                        ...staffData,
+                        isTemporary: true
+                    };
+                    
+                    // Add to local array IMMEDIATELY
+                    staffProfiles.push(tempStaff);
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('staffManagementPage');
+                    displayStaffList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background and update with real ID
+                    createStaffInSupabase(staffData, tempStaff);
+                }
+            };
+
+            // For simplicity, we'll use data URLs for photos instead of file upload
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveToDatabase(e.target.result);
+                };
+                reader.readAsDataURL(photoFile);
+            } else if (editingStaffId) {
+                // Keep existing photo for edits
+                const existingStaff = staffProfiles.find(s => s.id === editingStaffId);
+                saveToDatabase(existingStaff ? existingStaff.photo_url : null);
+            } else {
+                saveToDatabase();
+            }
+        }
+
+        // Background Supabase operations for staff
+        function createStaffInSupabase(staffData, tempStaff) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles`, {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(staffData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Staff member uploaded to Supabase:', data);
+                // Update the temporary staff with real Supabase ID
+                const tempIndex = staffProfiles.findIndex(s => s.id === tempStaff.id);
+                if (tempIndex !== -1 && data[0]) {
+                    staffProfiles[tempIndex] = { ...data[0], isTemporary: false };
+                }
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase upload failed:', error);
+            });
+        }
+
+        function updateStaffInSupabase(staffId, staffData) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?id=eq.${staffId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(staffData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Staff member updated in Supabase:', data);
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase update failed:', error);
+            });
+        }
+
+        function cancelAddStaff() {
+            showPage('staffManagementPage');
+            saveSessionState();
+        }
+
         function selectClient(client) {
             document.getElementById('clientSelect').textContent = `${client.first_name} ${client.last_name}`;
             document.getElementById('selectedClientId').value = client.id;
@@ -1049,9 +1568,17 @@
             if (password === 'office927') {
                 document.getElementById('staffPassword').value = '';
                 hideStaffError();
-                showPage('clientManagementPage');
-                document.getElementById('currentLocationSpan').textContent = getLocationName();
-                displayClientList();
+                
+                // Check if we're managing staff or clients
+                if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                    showPage('staffManagementPage');
+                    document.getElementById('currentStaffLocationSpan').textContent = getLocationName();
+                    displayStaffList();
+                } else {
+                    showPage('clientManagementPage');
+                    document.getElementById('currentLocationSpan').textContent = getLocationName();
+                    displayClientList();
+                }
                 saveSessionState();
             } else {
                 showStaffError('Invalid staff password.');
@@ -1515,7 +2042,7 @@
                     firstName = selectedClient.first_name;
                     surname = selectedClient.last_name;
                 } else {
-                    // For Seabreeze or other locations, use text input
+                    // For other locations, use text input
                     firstName = document.getElementById('leaveFirst').value.trim();
                     surname = document.getElementById('leaveLast').value.trim();
                     
@@ -1524,8 +2051,23 @@
                         return;
                     }
                 }
+            } else if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                const selectedStaffId = document.getElementById('selectedDepartureStaffId').value;
+                if (!selectedStaffId) {
+                    alert('Please select a staff member from the dropdown.');
+                    return;
+                }
+                
+                const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
+                if (!selectedStaff) {
+                    alert('Selected staff member not found. Please try again.');
+                    return;
+                }
+                
+                firstName = selectedStaff.first_name;
+                surname = selectedStaff.last_name;
             } else {
-                // For visitors and staff, use text input
+                // For visitors and staff at other locations, use text input
                 firstName = document.getElementById('leaveFirst').value.trim();
                 surname = document.getElementById('leaveLast').value.trim();
                 
@@ -1873,10 +2415,32 @@
                     showPage('arrivingPage');
                     buildArrivalForm();
                 }
+            } else if (activePage === 'staffManagementPage' || activePage === 'addStaffPage') {
+                if (activePage === 'addStaffPage') {
+                    showPage('staffManagementPage');
+                } else if (activePage === 'staffManagementPage') {
+                    showPage('arrivingPage');
+                    buildArrivalForm(); // Rebuild the form to show the staff dropdown again
+                } else {
+                    showPage('arrivingPage');
+                    buildArrivalForm();
+                }
             } else {
                 showPage('userTypeSelect');
             }
             saveSessionState(); // Save state when going back
+        }
+
+        function finishClientManagement() {
+            showPage('arrivingPage');
+            buildArrivalForm(); // Rebuild the form to show the client dropdown
+            saveSessionState();
+        }
+
+        function finishStaffManagement() {
+            showPage('arrivingPage');
+            buildArrivalForm(); // Rebuild the form to show the staff dropdown
+            saveSessionState();
         }
 
         function adminReset() {
