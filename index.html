@@ -121,6 +121,176 @@
         .alert-info { background: #e3f2fd; color: #0277bd; border: 1px solid #b3e5fc; }
         .countdown { margin-top: 15px; font-size: 16px; font-weight: bold; color: #0277bd; }
         
+        /* Client Dropdown Styles */
+        .client-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .client-select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .client-select::after {
+            content: '▼';
+            color: #666;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .client-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #74b9ff;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .client-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .client-option:hover {
+            background: #f8f9fa;
+        }
+        
+        .client-photo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .client-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .settings-icon {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 18px;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .settings-icon:hover {
+            background: rgba(255,255,255,0.2);
+            color: #333;
+        }
+        
+        /* Client Management Styles */
+        .client-management {
+            padding: 20px;
+        }
+        
+        .client-list {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .client-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .client-card-photo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .client-card-info {
+            flex: 1;
+        }
+        
+        .client-card-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .client-card-location {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .client-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 12px;
+            margin: 0;
+            width: auto;
+        }
+        
+        .photo-upload {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .photo-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            margin: 0 auto 15px;
+            display: block;
+        }
+        
+        .upload-btn {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .upload-btn input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
         /* Feedback Form Styles */
         .feedback-question {
             margin-bottom: 25px;
@@ -327,6 +497,84 @@
                 </form>
             </div>
 
+            <!-- Staff Authentication Page -->
+            <div id="staffAuthPage" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Staff Authentication</h2>
+                <div class="alert alert-info">Please enter your staff password to manage client profiles</div>
+                <div class="form-group">
+                    <label for="staffPassword">Password:</label>
+                    <input type="password" id="staffPassword" placeholder="Enter staff password" onkeypress="if(event.key==='Enter') doStaffLogin()">
+                </div>
+                <button class="btn btn-primary" onclick="doStaffLogin()">🔐 Verify Staff Access</button>
+                <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                <div id="staffLoginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+            </div>
+
+            <!-- Client Management Page -->
+            <div id="clientManagementPage" class="page">
+                <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
+                    <div class="settings-icon" onclick="doGoBack()" style="position: static; margin: 0; background: #6c757d; color: white; border: 2px solid #5a6268; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">← Back</div>
+                    <div class="settings-icon" onclick="loadClientProfiles()" style="position: static; margin: 0; background: #17a2b8; color: white; border: 2px solid #138496; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">🔄 Refresh</div>
+                </div>
+                
+                <h2 style="text-align: center; margin-bottom: 30px; margin-top: 60px; color: #333;">Client Management</h2>
+                <div class="alert alert-info" id="locationInfo">Managing clients for: <span id="currentLocationSpan"></span></div>
+                
+                <div class="client-management">
+                    <div style="margin-bottom: 20px;">
+                        <button class="btn btn-success" onclick="showAddClientForm()">➕ Add New Client</button>
+                    </div>
+                    
+                    <div id="clientList" class="client-list">
+                        <!-- Client cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit Client Form -->
+            <div id="addClientPage" class="page">
+                <div style="position: absolute; top: 15px; right: 15px;">
+                    <div class="settings-icon" onclick="cancelAddClient()" style="position: static; margin: 0; background: #6c757d; color: white; border: 2px solid #5a6268; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">← Back</div>
+                </div>
+                
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;" id="clientFormTitle">Add New Client</h2>
+                
+                <div class="form-group">
+                    <div class="photo-upload">
+                        <img id="photoPreview" class="photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E" alt="Client Photo">
+                        <div class="upload-btn">
+                            <label for="clientPhoto" class="btn btn-secondary">📷 Choose Photo</label>
+                            <input type="file" id="clientPhoto" accept="image/*" onchange="previewPhoto(event)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="clientFirstName">First Name: <span class="required">*</span></label>
+                    <input type="text" id="clientFirstName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="clientLastName">Last Name: <span class="required">*</span></label>
+                    <input type="text" id="clientLastName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="clientLocation">Location: <span class="required">*</span></label>
+                    <select id="clientLocation" required>
+                        <option value="">-- Select Location --</option>
+                        <option value="The Royal">The Royal</option>
+                        <option value="The Crown">The Crown</option>
+                        <option value="Seabreeze">Seabreeze</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn btn-success" onclick="saveClientProfile()">💾 Save Client</button>
+                    <button class="btn btn-secondary" onclick="cancelAddClient()">❌ Cancel</button>
+                </div>
+            </div>
+
             <div id="successPage" class="page">
                 <!-- Personal Message Box - Large and Eye-catching -->
                 <div class="alert" style="background: linear-gradient(135deg, #d4f6d4 0%, #c8e6c9 100%); color: #2e7d32; border: 2px solid #a5d6a7; padding: 25px; margin-bottom: 15px; font-size: 18px; font-weight: bold; text-align: center; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
@@ -363,6 +611,8 @@
             adminClicks: 0
         };
         let currentDepartingVisitor = null;
+        let editingClientId = null;
+        let clientProfiles = [];
 
         // Supabase configuration
         const VISITOR_CONFIG = {
@@ -383,9 +633,9 @@
             }
             
             if (email === 'office@alexdavis.co.uk' && password === 'office927') {
-    console.log('Login successful!');
-    console.log('Valid credentials: office@alexdavis.co.uk / office927');
-    APP.company = 'Alex Davis Care Group';
+                console.log('Login successful!');
+                console.log('Valid credentials: office@alexdavis.co.uk / office927');
+                APP.company = 'Alex Davis Care Group';
                 APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
                 
                 document.getElementById('emailAddress').value = '';
@@ -427,6 +677,7 @@
             APP.currentBusiness = document.getElementById('businessDropdown').value;
             if (APP.currentBusiness) {
                 updateHeader(); // This will now show the location name
+                loadClientProfiles(); // Load client profiles when location is selected
                 showPage('userTypeSelect');
                 saveSessionState(); // Save state after everything is updated
             }
@@ -528,6 +779,42 @@
                         <input type="tel" id="mobile" placeholder="04XX XXX XXX">
                     </div>
                 `;
+            } else if (APP.currentUserType === 'client') {
+                // Check if current location supports client management
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    fields = `
+                        <div class="form-group">
+                            <label>Select Client: <span class="required">*</span></label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div class="client-dropdown" style="flex: 1;">
+                                    <div class="client-select" id="clientSelect" onclick="toggleClientOptions()">
+                                        Choose a client...
+                                    </div>
+                                    <div class="client-options" id="clientOptions">
+                                        <!-- Client options will be populated here -->
+                                    </div>
+                                </div>
+                                <div class="settings-icon" onclick="showClientSettings()" style="position: static; margin-top: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                            </div>
+                            <input type="hidden" id="selectedClientId">
+                        </div>
+                    `;
+                } else {
+                    fields = `
+                        <div class="form-group">
+                            <label>First Name: <span class="required">*</span></label>
+                            <input type="text" id="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Surname: <span class="required">*</span></label>
+                            <input type="text" id="surname" required>
+                        </div>
+                        <div class="alert alert-info">
+                            Client management is available for The Royal, The Crown, and Seabreeze locations.
+                        </div>
+                    `;
+                }
             } else {
                 fields = `
                     <div class="form-group">
@@ -545,24 +832,485 @@
                 <button class="btn btn-success" onclick="doRecordArrival()">💾 Record Arrival</button>
                 <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
             `;
+            
+            // Populate client options if it's a client form
+            if (APP.currentUserType === 'client') {
+                populateClientOptions();
+            }
         }
 
         function buildDepartureForm() {
-            document.getElementById('leavingPage').innerHTML = `
-                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
-                <div class="alert alert-info">Enter your name to record departure:</div>
-                <div class="form-group">
-                    <label for="leaveFirst">First Name: <span class="required">*</span></label>
-                    <input type="text" id="leaveFirst" required autocomplete="off" oninput="showNameSuggestions()" onblur="hideNameSuggestions()" onkeydown="handleSuggestionKeyboard(event)">
-                    <div id="nameSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
-                </div>
-                <div class="form-group">
-                    <label for="leaveLast">Surname: <span class="required">*</span></label>
-                    <input type="text" id="leaveLast" required autocomplete="off">
-                </div>
-                <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
-                <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
-            `;
+            const currentLocation = getLocationName();
+            
+            // Check if this is a client departure at The Royal, The Crown, or Seabreeze
+            if (APP.currentUserType === 'client' && (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze')) {
+                document.getElementById('leavingPage').innerHTML = `
+                    <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                    <div class="alert alert-info">Select your name to record departure:</div>
+                    
+                    <div class="form-group">
+                        <label>Select Client: <span class="required">*</span></label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div class="client-dropdown" style="flex: 1;">
+                                <div class="client-select" id="departureClientSelect" onclick="toggleDepartureClientOptions()">
+                                    Choose a client...
+                                </div>
+                                <div class="client-options" id="departureClientOptions">
+                                    <!-- Client options will be populated here -->
+                                </div>
+                            </div>
+                            <div class="settings-icon" onclick="showClientSettings()" style="position: static; margin-top: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                        </div>
+                        <input type="hidden" id="selectedDepartureClientId">
+                    </div>
+                    
+                    <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
+                    <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                `;
+                
+                // Populate departure client options
+                populateDepartureClientOptions();
+            } else {
+                // Original departure form for other user types or locations
+                document.getElementById('leavingPage').innerHTML = `
+                    <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
+                    <div class="alert alert-info">Enter your name to record departure:</div>
+                    <div class="form-group">
+                        <label for="leaveFirst">First Name: <span class="required">*</span></label>
+                        <input type="text" id="leaveFirst" required autocomplete="off" oninput="showNameSuggestions()" onblur="hideNameSuggestions()" onkeydown="handleSuggestionKeyboard(event)">
+                        <div id="nameSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="leaveLast">Surname: <span class="required">*</span></label>
+                        <input type="text" id="leaveLast" required autocomplete="off">
+                    </div>
+                    <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
+                    <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                `;
+            }
+        }
+
+        // Client Management Functions
+        function loadClientProfiles() {
+            const currentLocation = getLocationName();
+            if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
+                return Promise.resolve([]);
+            }
+
+            // Fetch from Supabase
+            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${currentLocation}&select=*`, {
+                method: 'GET',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                clientProfiles = data || [];
+                console.log('Loaded client profiles:', clientProfiles);
+                return clientProfiles;
+            })
+            .catch(error => {
+                console.error('Error loading client profiles:', error);
+                clientProfiles = [];
+                return [];
+            });
+        }
+
+        function populateClientOptions() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (!optionsDiv) return;
+
+            // Ensure client profiles are loaded before populating
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    populateClientOptionsInternal();
+                });
+            } else {
+                populateClientOptionsInternal();
+            }
+        }
+
+        function populateClientOptionsInternal() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
+
+            if (locationClients.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
+                return;
+            }
+
+            optionsDiv.innerHTML = '';
+            locationClients.forEach(client => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectClient(client);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                    <span class="client-name">${client.first_name} ${client.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleClientOptions() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                populateClientOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectClient(client) {
+            document.getElementById('clientSelect').textContent = `${client.first_name} ${client.last_name}`;
+            document.getElementById('selectedClientId').value = client.id;
+            document.getElementById('clientOptions').style.display = 'none';
+        }
+
+        function populateDepartureClientOptions() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (!optionsDiv) return;
+
+            // Ensure client profiles are loaded before populating
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    populateDepartureClientOptionsInternal();
+                });
+            } else {
+                populateDepartureClientOptionsInternal();
+            }
+        }
+
+        function populateDepartureClientOptionsInternal() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
+
+            if (locationClients.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
+                return;
+            }
+
+            optionsDiv.innerHTML = '';
+            locationClients.forEach(client => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectDepartureClient(client);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                    <span class="client-name">${client.first_name} ${client.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleDepartureClientOptions() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                populateDepartureClientOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectDepartureClient(client) {
+            document.getElementById('departureClientSelect').textContent = `${client.first_name} ${client.last_name}`;
+            document.getElementById('selectedDepartureClientId').value = client.id;
+            document.getElementById('departureClientOptions').style.display = 'none';
+        }
+
+        function showClientSettings() {
+            showPage('staffAuthPage');
+            saveSessionState();
+        }
+
+        function doStaffLogin() {
+            const password = document.getElementById('staffPassword').value.trim();
+            
+            if (!password) {
+                showStaffError('Please enter the staff password.');
+                return;
+            }
+            
+            if (password === 'office927') {
+                document.getElementById('staffPassword').value = '';
+                hideStaffError();
+                showPage('clientManagementPage');
+                document.getElementById('currentLocationSpan').textContent = getLocationName();
+                displayClientList();
+                saveSessionState();
+            } else {
+                showStaffError('Invalid staff password.');
+            }
+        }
+
+        function showStaffError(message) {
+            const errorDiv = document.getElementById('staffLoginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideStaffError() {
+            document.getElementById('staffLoginError').style.display = 'none';
+        }
+
+        function displayClientList() {
+            const clientListDiv = document.getElementById('clientList');
+            const currentLocation = getLocationName();
+            
+            // Ensure client profiles are loaded before displaying
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    displayClientListInternal();
+                });
+            } else {
+                displayClientListInternal();
+            }
+        }
+
+        function displayClientListInternal() {
+            const clientListDiv = document.getElementById('clientList');
+            const currentLocation = getLocationName();
+            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
+
+            if (locationClients.length === 0) {
+                clientListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No clients registered for this location yet.</div>';
+                return;
+            }
+
+            let html = '';
+            locationClients.forEach(client => {
+                html += `
+                    <div class="client-card">
+                        <img class="client-card-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                        <div class="client-card-info">
+                            <div class="client-card-name">${client.first_name} ${client.last_name}</div>
+                            <div class="client-card-location">${client.location}</div>
+                        </div>
+                        <div class="client-card-actions">
+                            <button class="btn btn-primary btn-small" onclick="editClient(${client.id})">✏️ Edit</button>
+                            <button class="btn btn-warning btn-small" onclick="deleteClient(${client.id})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            clientListDiv.innerHTML = html;
+        }
+
+        function showAddClientForm() {
+            editingClientId = null;
+            document.getElementById('clientFormTitle').textContent = 'Add New Client';
+            document.getElementById('clientFirstName').value = '';
+            document.getElementById('clientLastName').value = '';
+            document.getElementById('clientLocation').value = getLocationName();
+            resetPhotoPreview();
+            showPage('addClientPage');
+            saveSessionState();
+        }
+
+        function editClient(clientId) {
+            const client = clientProfiles.find(c => c.id === clientId);
+            if (!client) return;
+
+            editingClientId = clientId;
+            document.getElementById('clientFormTitle').textContent = 'Edit Client';
+            document.getElementById('clientFirstName').value = client.first_name;
+            document.getElementById('clientLastName').value = client.last_name;
+            document.getElementById('clientLocation').value = client.location;
+            
+            if (client.photo_url) {
+                document.getElementById('photoPreview').src = client.photo_url;
+            } else {
+                resetPhotoPreview();
+            }
+            
+            showPage('addClientPage');
+            saveSessionState();
+        }
+
+        function deleteClient(clientId) {
+            const client = clientProfiles.find(c => c.id === clientId);
+            if (!client) return;
+
+            if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
+                // Remove from local array IMMEDIATELY
+                clientProfiles = clientProfiles.filter(c => c.id !== clientId);
+                displayClientList();
+                
+                // Delete from Supabase in background
+                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Client deleted from Supabase');
+                    } else {
+                        console.log('⚠️ Supabase delete failed, but local delete successful');
+                    }
+                })
+                .catch(error => {
+                    console.error('⚠️ Background delete failed:', error);
+                    // Local delete already happened, so this doesn't affect user experience
+                });
+            }
+        }
+
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function resetPhotoPreview() {
+            document.getElementById('photoPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E";
+        }
+
+        function saveClientProfile() {
+            const firstName = document.getElementById('clientFirstName').value.trim();
+            const lastName = document.getElementById('clientLastName').value.trim();
+            const location = document.getElementById('clientLocation').value;
+            const photoFile = document.getElementById('clientPhoto').files[0];
+
+            if (!firstName || !lastName || !location) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const saveToDatabase = (photoUrl = null) => {
+                const clientData = {
+                    first_name: firstName,
+                    last_name: lastName,
+                    location: location,
+                    photo_url: photoUrl
+                };
+
+                if (editingClientId) {
+                    // Update existing client in local array IMMEDIATELY
+                    const index = clientProfiles.findIndex(c => c.id === editingClientId);
+                    if (index !== -1) {
+                        clientProfiles[index] = { ...clientProfiles[index], ...clientData };
+                    }
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('clientManagementPage');
+                    displayClientList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background (async)
+                    updateClientInSupabase(editingClientId, clientData);
+                } else {
+                    // Create temporary client object with fake ID for immediate display
+                    const tempClient = {
+                        id: Date.now(), // Temporary ID
+                        ...clientData,
+                        isTemporary: true
+                    };
+                    
+                    // Add to local array IMMEDIATELY
+                    clientProfiles.push(tempClient);
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('clientManagementPage');
+                    displayClientList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background and update with real ID
+                    createClientInSupabase(clientData, tempClient);
+                }
+            };
+
+            // For simplicity, we'll use data URLs for photos instead of file upload
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveToDatabase(e.target.result);
+                };
+                reader.readAsDataURL(photoFile);
+            } else if (editingClientId) {
+                // Keep existing photo for edits
+                const existingClient = clientProfiles.find(c => c.id === editingClientId);
+                saveToDatabase(existingClient ? existingClient.photo_url : null);
+            } else {
+                saveToDatabase();
+            }
+        }
+
+        // Background Supabase operations
+        function createClientInSupabase(clientData, tempClient) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles`, {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(clientData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Client uploaded to Supabase:', data);
+                // Update the temporary client with real Supabase ID
+                const tempIndex = clientProfiles.findIndex(c => c.id === tempClient.id);
+                if (tempIndex !== -1 && data[0]) {
+                    clientProfiles[tempIndex] = { ...data[0], isTemporary: false };
+                }
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase upload failed:', error);
+                // Keep the temporary client in the array - still works locally
+            });
+        }
+
+        function updateClientInSupabase(clientId, clientData) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(clientData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Client updated in Supabase:', data);
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase update failed:', error);
+                // Local data is already updated, so this doesn't affect user experience
+            });
+        }
+
+        function cancelAddClient() {
+            showPage('clientManagementPage');
+            saveSessionState();
         }
 
         // Get list of people who arrived today and haven't departed yet
@@ -687,12 +1435,42 @@
         }
 
         function doRecordArrival() {
-            const firstName = document.getElementById('firstName').value.trim();
-            const surname = document.getElementById('surname').value.trim();
+            let firstName, surname;
             
-            if (!firstName || !surname) {
-                alert('Please enter both first name and surname.');
-                return;
+            if (APP.currentUserType === 'client') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown') {
+                    const selectedClientId = document.getElementById('selectedClientId').value;
+                    if (!selectedClientId) {
+                        alert('Please select a client from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
+                    if (!selectedClient) {
+                        alert('Selected client not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedClient.first_name;
+                    surname = selectedClient.last_name;
+                } else {
+                    firstName = document.getElementById('firstName').value.trim();
+                    surname = document.getElementById('surname').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
+            } else {
+                firstName = document.getElementById('firstName').value.trim();
+                surname = document.getElementById('surname').value.trim();
+                
+                if (!firstName || !surname) {
+                    alert('Please enter both first name and surname.');
+                    return;
+                }
             }
 
             const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
@@ -716,12 +1494,45 @@
         }
 
         function doRecordDeparture() {
-            const firstName = document.getElementById('leaveFirst').value.trim();
-            const surname = document.getElementById('leaveLast').value.trim();
+            let firstName, surname;
             
-            if (!firstName || !surname) {
-                alert('Please enter both first name and surname.');
-                return;
+            // Check if this is a client departure with dropdown selection
+            if (APP.currentUserType === 'client') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    const selectedClientId = document.getElementById('selectedDepartureClientId').value;
+                    if (!selectedClientId) {
+                        alert('Please select a client from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
+                    if (!selectedClient) {
+                        alert('Selected client not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedClient.first_name;
+                    surname = selectedClient.last_name;
+                } else {
+                    // For Seabreeze or other locations, use text input
+                    firstName = document.getElementById('leaveFirst').value.trim();
+                    surname = document.getElementById('leaveLast').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
+            } else {
+                // For visitors and staff, use text input
+                firstName = document.getElementById('leaveFirst').value.trim();
+                surname = document.getElementById('leaveLast').value.trim();
+                
+                if (!firstName || !surname) {
+                    alert('Please enter both first name and surname.');
+                    return;
+                }
             }
 
             currentDepartingVisitor = {
@@ -1049,7 +1860,22 @@
         }
 
         function doGoBack() {
-            showPage('userTypeSelect');
+            // Determine where to go back to based on current context
+            const activePage = document.querySelector('.page.active').id;
+            
+            if (activePage === 'staffAuthPage' || activePage === 'clientManagementPage' || activePage === 'addClientPage') {
+                if (activePage === 'addClientPage') {
+                    showPage('clientManagementPage');
+                } else if (activePage === 'clientManagementPage') {
+                    showPage('arrivingPage');
+                    buildArrivalForm(); // Rebuild the form to show the client dropdown again
+                } else {
+                    showPage('arrivingPage');
+                    buildArrivalForm();
+                }
+            } else {
+                showPage('userTypeSelect');
+            }
             saveSessionState(); // Save state when going back
         }
 
@@ -1159,6 +1985,23 @@
                 if (e.key === 'Enter') doLogin();
             });
             
+            // Add click outside to close client dropdown
+            document.addEventListener('click', function(e) {
+                // Close arrival dropdown
+                const dropdown = document.getElementById('clientOptions');
+                const select = document.getElementById('clientSelect');
+                if (dropdown && select && !select.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+                
+                // Close departure dropdown
+                const departureDropdown = document.getElementById('departureClientOptions');
+                const departureSelect = document.getElementById('departureClientSelect');
+                if (departureDropdown && departureSelect && !departureSelect.contains(e.target) && !departureDropdown.contains(e.target)) {
+                    departureDropdown.style.display = 'none';
+                }
+            });
+            
             // Restore session state from localStorage
             restoreSessionState();
         });
@@ -1235,6 +2078,7 @@
                             if (APP.currentBusiness) {
                                 document.getElementById('businessDropdown').value = APP.currentBusiness;
                                 updateHeader();
+                                loadClientProfiles(); // Load client profiles when restoring session
                             }
                             
                             // Restore user type selection if it exists
@@ -1258,6 +2102,9 @@
                                     buildDepartureForm();
                                 } else if (sessionState.currentPage === 'feedbackPage') {
                                     setupStarRatings();
+                                } else if (sessionState.currentPage === 'clientManagementPage') {
+                                    document.getElementById('currentLocationSpan').textContent = getLocationName();
+                                    displayClientList();
                                 } else if (sessionState.currentPage === 'successPage') {
                                     // If on success page, redirect to user type selection instead
                                     // Success page is temporary and shouldn't be restored
