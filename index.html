@@ -342,8 +342,19 @@
         </div>
     </div>
 
-    <script>
-        // Global variables
+   <script>
+    // Disable console logs in production
+    (function() {
+        if (window.location.protocol === 'https:' || window.location.hostname !== 'localhost') {
+            console.log = function() {};
+            console.warn = function() {};
+            console.error = function() {};
+            console.info = function() {};
+            console.debug = function() {};
+        }
+    })();
+
+    // Global variables
         let APP = {
             company: '',
             locations: [],
@@ -372,8 +383,9 @@
             }
             
             if (email === 'office@alexdavis.co.uk' && password === 'office927') {
-                console.log('Login successful!');
-                APP.company = 'Alex Davis Care Group';
+    console.log('Login successful!');
+    console.log('Valid credentials: office@alexdavis.co.uk / office927');
+    APP.company = 'Alex Davis Care Group';
                 APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
                 
                 document.getElementById('emailAddress').value = '';
