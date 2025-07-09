@@ -485,11 +485,11 @@
             if (action === 'arriving') {
                 buildArrivalForm();
                 showPage('arrivingPage');
-                saveSessionState(); // Save state when navigating to forms
+                saveSessionState(); // Save state when going to arriving page
             } else {
                 buildDepartureForm();
                 showPage('leavingPage');
-                saveSessionState(); // Save state when navigating to forms
+                saveSessionState(); // Save state when going to leaving page
             }
         }
 
@@ -541,15 +541,137 @@
                 <div class="alert alert-info">Enter your name to record departure:</div>
                 <div class="form-group">
                     <label for="leaveFirst">First Name: <span class="required">*</span></label>
-                    <input type="text" id="leaveFirst" required>
+                    <input type="text" id="leaveFirst" required autocomplete="off" oninput="showNameSuggestions()" onblur="hideNameSuggestions()" onkeydown="handleSuggestionKeyboard(event)">
+                    <div id="nameSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
                 </div>
                 <div class="form-group">
                     <label for="leaveLast">Surname: <span class="required">*</span></label>
-                    <input type="text" id="leaveLast" required>
+                    <input type="text" id="leaveLast" required autocomplete="off">
                 </div>
                 <button class="btn btn-warning" onclick="doRecordDeparture()">Record Departure</button>
                 <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
             `;
+        }
+
+        // Get list of people who arrived today and haven't departed yet
+        function getCurrentArrivals() {
+            const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
+            const today = new Date().toLocaleDateString();
+            const currentLocation = getLocationName();
+            const currentUserType = APP.currentUserType;
+            
+            return existingData.filter(person => 
+                person.arrivalDate === today && 
+                person.status === 'arrived' && 
+                person.location === currentLocation &&
+                person.userType === currentUserType
+            );
+        }
+
+        // Show name suggestions as user types
+        function showNameSuggestions() {
+            const input = document.getElementById('leaveFirst');
+            const suggestionsDiv = document.getElementById('nameSuggestions');
+            const searchTerm = input.value.toLowerCase().trim();
+            
+            if (searchTerm.length < 1) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            const currentArrivals = getCurrentArrivals();
+            const matches = currentArrivals.filter(person => 
+                person.firstName.toLowerCase().includes(searchTerm)
+            );
+            
+            if (matches.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Build suggestions HTML
+            let suggestionsHTML = '';
+            matches.forEach((person, index) => {
+                const arrivalTime = person.arrivalTime || 'Unknown time';
+                suggestionsHTML += `
+                    <div class="suggestion-item" data-index="${index}" onclick="selectSuggestion('${person.firstName}', '${person.surname}')" 
+                         style="padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s ease;"
+                         onmouseover="this.style.background='#f0f8ff'" onmouseout="this.style.background='white'">
+                        <div style="font-weight: bold; color: #333;">${person.firstName} ${person.surname}</div>
+                        <div style="font-size: 12px; color: #666;">Arrived: ${arrivalTime}</div>
+                        <div style="font-size: 11px; color: #999;">${person.email !== 'Not provided' ? person.email : ''}</div>
+                    </div>
+                `;
+            });
+            
+            suggestionsDiv.innerHTML = suggestionsHTML;
+            suggestionsDiv.style.display = 'block';
+            
+            // Position the suggestions below the input
+            const inputRect = input.getBoundingClientRect();
+            suggestionsDiv.style.width = input.offsetWidth + 'px';
+        }
+
+        // Select a suggestion
+        function selectSuggestion(firstName, surname) {
+            document.getElementById('leaveFirst').value = firstName;
+            document.getElementById('leaveLast').value = surname;
+            hideNameSuggestions();
+        }
+
+        // Hide suggestions
+        function hideNameSuggestions() {
+            setTimeout(() => {
+                const suggestionsDiv = document.getElementById('nameSuggestions');
+                if (suggestionsDiv) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            }, 200); // Small delay to allow clicks to register
+        }
+
+        // Handle keyboard navigation in suggestions
+        let selectedSuggestionIndex = -1;
+        function handleSuggestionKeyboard(event) {
+            const suggestionsDiv = document.getElementById('nameSuggestions');
+            const suggestions = suggestionsDiv.querySelectorAll('.suggestion-item');
+            
+            if (suggestions.length === 0) return;
+            
+            switch(event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    selectedSuggestionIndex = (selectedSuggestionIndex + 1) % suggestions.length;
+                    highlightSuggestion(suggestions);
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    selectedSuggestionIndex = selectedSuggestionIndex <= 0 ? suggestions.length - 1 : selectedSuggestionIndex - 1;
+                    highlightSuggestion(suggestions);
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+                        suggestions[selectedSuggestionIndex].click();
+                    }
+                    break;
+                case 'Escape':
+                    hideNameSuggestions();
+                    selectedSuggestionIndex = -1;
+                    break;
+            }
+        }
+
+        // Highlight selected suggestion
+        function highlightSuggestion(suggestions) {
+            suggestions.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.style.background = '#e3f2fd';
+                    item.style.borderLeft = '3px solid #2196f3';
+                } else {
+                    item.style.background = 'white';
+                    item.style.borderLeft = 'none';
+                }
+            });
         }
 
         function doRecordArrival() {
@@ -717,65 +839,105 @@
 
         function saveToStorage(data) {
             try {
-                // Save to localStorage as backup
+                // Get existing data
                 const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
-                existingData.unshift(data);
+                
+                // Check if this is a departure - try to find matching arrival record
+                if (data.status === 'departed') {
+                    const matchingIndex = findMatchingArrival(existingData, data);
+                    
+                    if (matchingIndex !== -1) {
+                        console.log('Found matching arrival record, updating existing entry');
+                        // Update the existing record with departure info
+                        const existingRecord = existingData[matchingIndex];
+                        
+                        // Keep the original arrival data and add departure data
+                        existingData[matchingIndex] = {
+                            ...existingRecord, // Keep all original data (email, mobile, arrival times)
+                            // Update with departure information
+                            departureDate: data.departureDate,
+                            departureTime: data.departureTime,
+                            status: 'departed',
+                            timestamp: data.timestamp, // Update timestamp to departure time
+                            // Add feedback if it exists (only visitors provide feedback)
+                            ...(data.feedback ? { feedback: data.feedback } : {})
+                        };
+                        
+                        console.log('Updated existing record:', existingData[matchingIndex]);
+                    } else {
+                        console.log('No matching arrival found, creating new departure record');
+                        // No matching arrival found, create new record
+                        existingData.unshift(data);
+                    }
+                } else {
+                    console.log('New arrival record');
+                    // This is an arrival, just add it normally
+                    existingData.unshift(data);
+                }
+                
+                // Save back to localStorage
                 localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
                 
-                // Also save to Supabase database
+                // Prepare data for Supabase
+                const latestRecord = data.status === 'departed' && findMatchingArrival(JSON.parse(localStorage.getItem('hellohubVisitors')), data) !== -1 
+                    ? JSON.parse(localStorage.getItem('hellohubVisitors'))[findMatchingArrival(JSON.parse(localStorage.getItem('hellohubVisitors')), data)]
+                    : data;
+                
                 const supabaseData = {
-                    first_name: data.firstName,
-                    surname: data.surname,
-                    email: data.email || 'Not provided',
-                    mobile: data.mobile || 'Not provided',
-                    user_type: data.userType,
-                    location: data.location,
-                    status: data.status
+                    first_name: latestRecord.firstName,
+                    surname: latestRecord.surname,
+                    email: latestRecord.email || 'Not provided',
+                    mobile: latestRecord.mobile || 'Not provided',
+                    user_type: latestRecord.userType,
+                    location: latestRecord.location,
+                    status: latestRecord.status
                 };
 
                 // Only add arrival data if it exists
-                if (data.arrivalDate) {
-                    supabaseData.arrival_date = data.arrivalDate;
+                if (latestRecord.arrivalDate) {
+                    supabaseData.arrival_date = latestRecord.arrivalDate;
                 }
-                if (data.arrivalTime) {
-                    supabaseData.arrival_time = data.arrivalTime;
+                if (latestRecord.arrivalTime) {
+                    supabaseData.arrival_time = latestRecord.arrivalTime;
                 }
 
                 // Only add departure data if it exists  
-                if (data.departureDate) {
-                    supabaseData.departure_date = data.departureDate;
+                if (latestRecord.departureDate) {
+                    supabaseData.departure_date = latestRecord.departureDate;
                 }
-                if (data.departureTime) {
-                    supabaseData.departure_time = data.departureTime;
+                if (latestRecord.departureTime) {
+                    supabaseData.departure_time = latestRecord.departureTime;
                 }
 
                 // Only add feedback if it exists
-                if (data.feedback) {
-                    supabaseData.feedback_overall = data.feedback.overall;
-                    supabaseData.feedback_safety = data.feedback.safety;
-                    supabaseData.feedback_responsive = data.feedback.responsive;
-                    supabaseData.feedback_caring = data.feedback.caring;
-                    supabaseData.feedback_leadership = data.feedback.leadership;
-                    supabaseData.feedback_effectiveness = data.feedback.effectiveness;
+                if (latestRecord.feedback) {
+                    supabaseData.feedback_overall = latestRecord.feedback.overall;
+                    supabaseData.feedback_safety = latestRecord.feedback.safety;
+                    supabaseData.feedback_responsive = latestRecord.feedback.responsive;
+                    supabaseData.feedback_caring = latestRecord.feedback.caring;
+                    supabaseData.feedback_leadership = latestRecord.feedback.leadership;
+                    supabaseData.feedback_effectiveness = latestRecord.feedback.effectiveness;
                     
                     // Calculate average rating manually
                     const ratings = [
-                        data.feedback.overall,
-                        data.feedback.safety,
-                        data.feedback.responsive,
-                        data.feedback.caring,
-                        data.feedback.leadership,
-                        data.feedback.effectiveness
+                        latestRecord.feedback.overall,
+                        latestRecord.feedback.safety,
+                        latestRecord.feedback.responsive,
+                        latestRecord.feedback.caring,
+                        latestRecord.feedback.leadership,
+                        latestRecord.feedback.effectiveness
                     ].filter(rating => rating > 0);
                     
                     const avgRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
                     
                     supabaseData.feedback_average = avgRating;
-                    supabaseData.feedback_comments = data.feedback.additionalComments || 'No additional comments';
+                    supabaseData.feedback_comments = latestRecord.feedback.additionalComments || 'No additional comments';
                 }
                 
                 console.log('Sending to Supabase:', JSON.stringify(supabaseData, null, 2));
                 
+                // For updates, we'd need to implement PUT/PATCH to Supabase
+                // For now, we'll still POST each record separately
                 fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/visitors`, {
                     method: 'POST',
                     headers: {
@@ -811,10 +973,40 @@
             }
         }
 
+        // Helper function to find matching arrival record for departure
+        function findMatchingArrival(existingData, departureData) {
+            // Look for a matching person who has arrived but not yet departed
+            // Match based on name, user type, and location on the same day
+            const departureDate = departureData.departureDate;
+            
+            for (let i = 0; i < existingData.length; i++) {
+                const record = existingData[i];
+                
+                // Check if names match (case insensitive, flexible matching)
+                const firstNameMatch = record.firstName.toLowerCase().trim() === departureData.firstName.toLowerCase().trim();
+                const surnameMatch = record.surname.toLowerCase().trim() === departureData.surname.toLowerCase().trim();
+                
+                // Check other criteria
+                const userTypeMatch = record.userType === departureData.userType;
+                const locationMatch = record.location === departureData.location;
+                const statusMatch = record.status === 'arrived'; // Only match with arrivals
+                const sameDayMatch = record.arrivalDate === departureDate; // Same day
+                
+                if (firstNameMatch && surnameMatch && userTypeMatch && locationMatch && statusMatch && sameDayMatch) {
+                    console.log('Found matching arrival:', record);
+                    return i;
+                }
+            }
+            
+            console.log('No matching arrival found for:', departureData.firstName, departureData.surname);
+            return -1; // No match found
+        }
+
         function showSuccess(personalMessage, systemMessage) {
             document.getElementById('successMsg').textContent = personalMessage;
             document.getElementById('successDetails').textContent = systemMessage;
             showPage('successPage');
+            saveSessionState(); // Save state when showing success page
             startCountdown();
         }
 
@@ -830,6 +1022,7 @@
                     APP.currentUserType = '';
                     document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
                     showPage('userTypeSelect');
+                    saveSessionState(); // Save state when countdown completes
                 } else {
                     setTimeout(updateCountdown, 1000);
                 }
@@ -1042,13 +1235,21 @@
                                 });
                             }
                             
-                            // Restore exact page they were on - this is the key fix
+                            // Restore exact page they were on - with proper form rebuilding
                             if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
                                 showPageWithoutSaving(sessionState.currentPage);
                                 
-                                // If we're restoring to feedback page, setup star ratings
-                                if (sessionState.currentPage === 'feedbackPage') {
+                                // Rebuild forms if necessary
+                                if (sessionState.currentPage === 'arrivingPage') {
+                                    buildArrivalForm();
+                                } else if (sessionState.currentPage === 'leavingPage') {
+                                    buildDepartureForm();
+                                } else if (sessionState.currentPage === 'feedbackPage') {
                                     setupStarRatings();
+                                } else if (sessionState.currentPage === 'successPage') {
+                                    // If on success page, redirect to user type selection instead
+                                    // Success page is temporary and shouldn't be restored
+                                    showPageWithoutSaving('userTypeSelect');
                                 }
                             } else {
                                 // Only use fallback logic if no currentPage was saved
