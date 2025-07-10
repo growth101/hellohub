@@ -1074,6 +1074,9 @@
                 return;
             }
 
+            // Sort clients alphabetically by first name
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
             optionsDiv.innerHTML = '';
             locationClients.forEach(client => {
                 const optionDiv = document.createElement('div');
@@ -1154,6 +1157,9 @@
                 return;
             }
 
+            // Sort staff alphabetically by first name
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
             optionsDiv.innerHTML = '';
             locationStaff.forEach(staff => {
                 const optionDiv = document.createElement('div');
@@ -1211,6 +1217,9 @@
                 optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
                 return;
             }
+
+            // Sort staff alphabetically by first name
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
 
             optionsDiv.innerHTML = '';
             locationStaff.forEach(staff => {
@@ -1272,6 +1281,9 @@
                 staffListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No staff registered for this location yet.</div>';
                 return;
             }
+
+            // Sort staff alphabetically by first name
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
 
             let html = '';
             locationStaff.forEach(staff => {
@@ -1523,6 +1535,9 @@
                 return;
             }
 
+            // Sort clients alphabetically by first name
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
             optionsDiv.innerHTML = '';
             locationClients.forEach(client => {
                 const optionDiv = document.createElement('div');
@@ -1620,6 +1635,9 @@
                 clientListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No clients registered for this location yet.</div>';
                 return;
             }
+
+            // Sort clients alphabetically by first name
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
 
             let html = '';
             locationClients.forEach(client => {
