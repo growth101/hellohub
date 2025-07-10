@@ -541,7 +541,7 @@
                     <div class="settings-icon" onclick="cancelAddClient()" style="position: static; margin: 0; background: #6c757d; color: white; border: 2px solid #5a6268; border-radius: 12px; width: 100px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;">← Back</div>
                 </div>
                 
-                <h2 style="text-align: center; margin-bottom: 30px; color: #333;" id="clientFormTitle">Add New Client</h2>
+                <h2 style="text-align: center; margin-bottom: 30px; margin-top: 60px; color: #333;" id="clientFormTitle">Add New Client</h2>
                 
                 <div class="form-group">
                     <div class="photo-upload">
@@ -636,6 +636,8 @@
                     <label for="staffLocationSelect">Location: <span class="required">*</span></label>
                     <select id="staffLocationSelect" required>
                         <option value="">-- Select Location --</option>
+                        <option value="The Royal">The Royal</option>
+                        <option value="The Crown">The Crown</option>
                         <option value="Seabreeze">Seabreeze</option>
                     </select>
                 </div>
@@ -889,8 +891,8 @@
                     `;
                 }
             } else {
-                // For staff at Seabreeze, show dropdown with photos
-                if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                // For staff at The Royal, The Crown, and Seabreeze, show dropdown with photos
+                if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
                     fields = `
                         <div class="form-group">
                             <label>Select Staff Member: <span class="required">*</span></label>
@@ -933,8 +935,8 @@
                 populateClientOptions();
             }
             
-            // Populate staff options if it's a staff form at Seabreeze
-            if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+            // Populate staff options if it's a staff form at any location with staff management
+            if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
                 populateStaffOptions();
             }
         }
@@ -970,8 +972,8 @@
                 // Populate departure client options
                 populateDepartureClientOptions();
             } else {
-                // For staff departure at Seabreeze, show dropdown
-                if (APP.currentUserType === 'staff' && currentLocation === 'Seabreeze') {
+                // For staff departure at The Royal, The Crown, and Seabreeze, show dropdown
+                if (APP.currentUserType === 'staff' && (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze')) {
                     document.getElementById('leavingPage').innerHTML = `
                         <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Leaving</h2>
                         
@@ -1100,7 +1102,7 @@
         // Staff Management Functions (Similar to Client Management)
         function loadStaffProfiles() {
             const currentLocation = getLocationName();
-            if (!currentLocation || currentLocation !== 'Seabreeze') {
+            if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
                 return Promise.resolve([]);
             }
 
@@ -1570,7 +1572,7 @@
                 hideStaffError();
                 
                 // Check if we're managing staff or clients
-                if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+                if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
                     showPage('staffManagementPage');
                     document.getElementById('currentStaffLocationSpan').textContent = getLocationName();
                     displayStaffList();
@@ -1966,7 +1968,7 @@
             
             if (APP.currentUserType === 'client') {
                 const currentLocation = getLocationName();
-                if (currentLocation === 'The Royal' || currentLocation === 'The Crown') {
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
                     const selectedClientId = document.getElementById('selectedClientId').value;
                     if (!selectedClientId) {
                         alert('Please select a client from the dropdown.');
@@ -1990,7 +1992,34 @@
                         return;
                     }
                 }
+            } else if (APP.currentUserType === 'staff') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    const selectedStaffId = document.getElementById('selectedStaffId').value;
+                    if (!selectedStaffId) {
+                        alert('Please select a staff member from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
+                    if (!selectedStaff) {
+                        alert('Selected staff member not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedStaff.first_name;
+                    surname = selectedStaff.last_name;
+                } else {
+                    firstName = document.getElementById('firstName').value.trim();
+                    surname = document.getElementById('surname').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
             } else {
+                // For visitors - always use text input
                 firstName = document.getElementById('firstName').value.trim();
                 surname = document.getElementById('surname').value.trim();
                 
@@ -2051,7 +2080,7 @@
                         return;
                     }
                 }
-            } else if (APP.currentUserType === 'staff' && getLocationName() === 'Seabreeze') {
+            } else if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
                 const selectedStaffId = document.getElementById('selectedDepartureStaffId').value;
                 if (!selectedStaffId) {
                     alert('Please select a staff member from the dropdown.');
