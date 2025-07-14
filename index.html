@@ -664,18 +664,18 @@
     </div>
 
    <script>
-    // Disable console logs in production
-    (function() {
-        if (window.location.protocol === 'https:' || window.location.hostname !== 'localhost') {
-            console.log = function() {};
-            console.warn = function() {};
-            console.error = function() {};
-            console.info = function() {};
-            console.debug = function() {};
-        }
-    })();
+        // Disable console logs in production
+        (function() {
+            if (window.location.protocol === 'https:' || window.location.hostname !== 'localhost') {
+                console.log = function() {};
+                console.warn = function() {};
+                console.error = function() {};
+                console.info = function() {};
+                console.debug = function() {};
+            }
+        })();
 
-    // Global variables
+        // Global variables - MOVED TO TOP LEVEL
         let APP = {
             company: '',
             locations: [],
@@ -689,18 +689,24 @@
         let clientProfiles = [];
         let staffProfiles = [];
 
+        // Enhanced performance optimization with caching
+        let dataCache = {
+            clients: new Map(), // locationName -> {data: [], timestamp: number}
+            staff: new Map(),
+            cacheTimeout: 5 * 60 * 1000 // 5 minutes cache
+        };
+
         // Supabase configuration
         const VISITOR_CONFIG = {
             supabaseUrl: 'https://obyzwhqaqyiqpeoefjgw.supabase.co',
             supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ieXp3aHFhcXlpcXBlb2Vmamd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDY0MDAsImV4cCI6MjA2NzU4MjQwMH0.NaePwt-LGqNp4vc8TTcv3IyzFkamZtiHmvDLpDcliAc'
         };
 
+        // LOGIN FUNCTION - MOVED TO TOP LEVEL
         function doLogin() {
             console.log('Login function called');
             const email = document.getElementById('emailAddress').value.trim().toLowerCase();
             const password = document.getElementById('password').value.trim();
-            
-            console.log('Attempting login with:', email, password);
             
             if (!email || !password) {
                 showError('Please enter both email and password.');
@@ -709,21 +715,216 @@
             
             if (email === 'office@alexdavis.co.uk' && password === 'office927') {
                 console.log('Login successful!');
-                console.log('Valid credentials: office@alexdavis.co.uk / office927');
                 APP.company = 'Alex Davis Care Group';
                 APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
+                
+                // Save login state to localStorage with expiration
+                const loginData = {
+                    isAuthenticated: true,
+                    company: APP.company,
+                    locations: APP.locations,
+                    loginTime: Date.now(),
+                    expiresIn: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+                };
+                localStorage.setItem('hellohubAuth', JSON.stringify(loginData));
                 
                 document.getElementById('emailAddress').value = '';
                 document.getElementById('password').value = '';
                 hideError();
                 
+                // Start preloading data immediately after login
+                preloadAllLocationData();
+                
                 setupBusinessDropdown();
                 showPage('businessSelect');
-                saveSessionState(); // Save state when going to location selection
+                saveSessionState();
             } else {
                 console.log('Login failed');
                 showError('Invalid email or password.');
             }
+        }
+
+        // ALL OTHER FUNCTIONS FOLLOW
+        function showLoadingOptions(divId) {
+            const div = document.getElementById(divId);
+            if (div) {
+                div.innerHTML = '<div style="padding: 10px; text-align: center; color: #555;">Loading...</div>';
+            }
+        }
+
+        let clientProfilesLoaded = false;
+        let staffProfilesLoaded = false;
+
+        async function loadClientProfiles() {
+            const currentLocation = getLocationName();
+            const { data, error } = await supabase
+                .from('client_profiles')
+                .select('id, first_name, surname, email, mobile, user_type, location, status')
+                .eq('location', currentLocation);
+
+            clientProfiles = data || [];
+            clientProfilesLoaded = true;
+            console.log('Loaded client profiles:', clientProfiles);
+        }
+
+        async function loadStaffProfiles() {
+            const currentLocation = getLocationName();
+            const { data, error } = await supabase
+                .from('staff_profiles')
+                .select('id, first_name, surname, email, mobile, user_type, location, status')
+                .eq('location', currentLocation);
+
+            staffProfiles = data || [];
+            staffProfilesLoaded = true;
+            console.log('Loaded staff profiles:', staffProfiles);
+        }
+
+        // Check if user is already logged in from previous session
+        function checkAutoLogin() {
+            const savedAuth = localStorage.getItem('hellohubAuth');
+            
+            if (!savedAuth) {
+                console.log('No saved login found');
+                return false;
+            }
+            
+            try {
+                const authData = JSON.parse(savedAuth);
+                const now = Date.now();
+                const timeElapsed = now - authData.loginTime;
+                
+                // Check if login has expired (7 days)
+                if (timeElapsed > authData.expiresIn) {
+                    console.log('Saved login has expired');
+                    localStorage.removeItem('hellohubAuth');
+                    return false;
+                }
+                
+                // Valid saved login found
+                console.log('✅ Valid saved login found, auto-logging in...');
+                
+                // Restore login state
+                APP.company = authData.company;
+                APP.locations = authData.locations;
+                
+                // Show logged-in state immediately
+                setupBusinessDropdown();
+                updateHeader();
+                
+                // Start preloading data
+                preloadAllLocationData();
+                
+                return true;
+                
+            } catch (error) {
+                console.log('Error reading saved login:', error);
+                localStorage.removeItem('hellohubAuth');
+                return false;
+            }
+        }
+
+        // Smart cache-aware loading
+        function loadClientProfilesForLocation(location) {
+            // Check cache first
+            const cached = dataCache.clients.get(location);
+            const now = Date.now();
+            
+            if (cached && (now - cached.timestamp) < dataCache.cacheTimeout) {
+                console.log(`📋 Using cached client data for ${location}`);
+                return Promise.resolve(cached.data);
+            }
+            
+            console.log(`🌐 Fetching fresh client data for ${location}`);
+            
+            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${encodeURIComponent(location)}&select=*`, {
+                method: 'GET',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                // Cache the data
+                dataCache.clients.set(location, {
+                    data: data || [],
+                    timestamp: now
+                });
+                
+                console.log(`✅ Cached ${data.length} clients for ${location}`);
+                return data || [];
+            })
+            .catch(error => {
+                console.error(`❌ Error loading clients for ${location}:`, error);
+                return [];
+            });
+        }
+
+        function loadStaffProfilesForLocation(location) {
+            const cached = dataCache.staff.get(location);
+            const now = Date.now();
+            
+            if (cached && (now - cached.timestamp) < dataCache.cacheTimeout) {
+                console.log(`👥 Using cached staff data for ${location}`);
+                return Promise.resolve(cached.data);
+            }
+            
+            console.log(`🌐 Fetching fresh staff data for ${location}`);
+            
+            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${encodeURIComponent(location)}&select=*`, {
+                method: 'GET',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                dataCache.staff.set(location, {
+                    data: data || [],
+                    timestamp: now
+                });
+                
+                console.log(`✅ Cached ${data.length} staff for ${location}`);
+                return data || [];
+            })
+            .catch(error => {
+                console.error(`❌ Error loading staff for ${location}:`, error);
+                return [];
+            });
+        }
+
+        // Preload all location data when user logs in
+        function preloadAllLocationData() {
+            console.log('🚀 Preloading all location data...');
+            
+            const locations = ['The Royal', 'The Crown', 'Seabreeze'];
+            const startTime = Date.now();
+            
+            // Load all data concurrently
+            const allPromises = locations.flatMap(location => [
+                loadClientProfilesForLocation(location),
+                loadStaffProfilesForLocation(location)
+            ]);
+            
+            Promise.allSettled(allPromises).then(results => {
+                const loadTime = Date.now() - startTime;
+                console.log(`✅ Preloading completed in ${loadTime}ms`);
+                
+                // Log cache status
+                console.log('Cache status:', {
+                    clients: Array.from(dataCache.clients.keys()),
+                    staff: Array.from(dataCache.staff.keys())
+                });
+            });
         }
 
         function showError(message) {
@@ -751,10 +952,54 @@
         function doSelectBusiness() {
             APP.currentBusiness = document.getElementById('businessDropdown').value;
             if (APP.currentBusiness) {
-                updateHeader(); // This will now show the location name
-                loadClientProfiles(); // Load client profiles when location is selected
+                updateHeader();
+                fastSwitchLocation(); // Use fast switching instead
                 showPage('userTypeSelect');
-                saveSessionState(); // Save state after everything is updated
+                saveSessionState();
+            }
+        }
+
+        // Fast location switching with cached data
+        function fastSwitchLocation() {
+            const currentLocation = getLocationName();
+            
+            // Get data from cache immediately
+            const cachedClients = dataCache.clients.get(currentLocation);
+            const cachedStaff = dataCache.staff.get(currentLocation);
+            
+            if (cachedClients) {
+                clientProfiles = cachedClients.data;
+                console.log(`⚡ Instantly loaded ${clientProfiles.length} clients from cache`);
+            }
+            
+            if (cachedStaff) {
+                staffProfiles = cachedStaff.data;
+                console.log(`⚡ Instantly loaded ${staffProfiles.length} staff from cache`);
+            }
+            
+            // Refresh cache in background if needed
+            const now = Date.now();
+            const promises = [];
+            
+            if (!cachedClients || (now - cachedClients.timestamp) > dataCache.cacheTimeout) {
+                promises.push(loadClientProfilesForLocation(currentLocation));
+            }
+            
+            if (!cachedStaff || (now - cachedStaff.timestamp) > dataCache.cacheTimeout) {
+                promises.push(loadStaffProfilesForLocation(currentLocation));
+            }
+            
+            if (promises.length > 0) {
+                Promise.all(promises).then(() => {
+                    // Update arrays with fresh data
+                    const freshClients = dataCache.clients.get(currentLocation);
+                    const freshStaff = dataCache.staff.get(currentLocation);
+                    
+                    if (freshClients) clientProfiles = freshClients.data;
+                    if (freshStaff) staffProfiles = freshStaff.data;
+                    
+                    console.log('🔄 Background refresh completed');
+                });
             }
         }
 
@@ -791,6 +1036,7 @@
                 } else {
                     // On location selection page - no location name yet
                     locationDiv.style.display = 'none';
+                    locationDiv.textContent = ''; // Clear any previous location text
                     document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
                 }
             } else {
@@ -799,6 +1045,7 @@
                 document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
                 logo.style.display = 'none';
                 locationDiv.style.display = 'none';
+                locationDiv.textContent = ''; // Clear location text when not logged in
             }
         }
 
@@ -831,6 +1078,7 @@
             }
         }
 
+        // Add all the remaining functions here...
         function buildArrivalForm() {
             const form = document.getElementById('arrivalForm');
             let fields = '';
@@ -941,6 +1189,7 @@
             }
         }
 
+        // Continue with the rest of the functions...
         function buildDepartureForm() {
             const currentLocation = getLocationName();
             
@@ -1019,6 +1268,1231 @@
             }
         }
 
+        // Add all the remaining critical functions
+        function populateClientOptions() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (!optionsDiv) return;
+
+            // Ensure client profiles are loaded before populating
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    populateClientOptionsInternal();
+                });
+            } else {
+                populateClientOptionsInternal();
+            }
+        }
+
+        function populateClientOptionsInternal() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationClients = (clientProfiles.filter(client => (client.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()));
+
+            if (locationClients.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
+                return;
+            }
+
+            // Sort clients alphabetically by first name
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            optionsDiv.innerHTML = '';
+            locationClients.forEach(client => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectClient(client);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                    <span class="client-name">${client.first_name} ${client.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleClientOptions() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                ultraFastPopulateClients(); // Ultra-fast population
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectClient(client) {
+            document.getElementById('clientSelect').textContent = `${client.first_name} ${client.last_name}`;
+            document.getElementById('selectedClientId').value = client.id;
+            document.getElementById('clientOptions').style.display = 'none';
+        }
+
+        function ultraFastPopulateClients() {
+            const optionsDiv = document.getElementById('clientOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            
+            // Get from cache instantly
+            const cachedData = dataCache.clients.get(currentLocation);
+            if (cachedData) {
+                const locationClients = cachedData.data.filter(client => 
+                    (client.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+                );
+                
+                renderClientOptions(optionsDiv, locationClients, currentLocation);
+                return;
+            }
+            
+            // Show loading while fetching
+            optionsDiv.innerHTML = '<div class="client-option" style="padding: 15px; text-align: center; color: #666;">⚡ Loading...</div>';
+            
+            loadClientProfilesForLocation(currentLocation).then(data => {
+                clientProfiles = data;
+                const locationClients = data.filter(client => 
+                    (client.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+                );
+                renderClientOptions(optionsDiv, locationClients, currentLocation);
+            });
+        }
+
+        function renderClientOptions(optionsDiv, clients, location) {
+            if (clients.length === 0) {
+                optionsDiv.innerHTML = `<div class="client-option" style="color: #666; font-style: italic; padding: 15px; text-align: center;">No clients for ${location}</div>`;
+                return;
+            }
+
+            clients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            const html = clients.map(client => `
+                <div class="client-option" onclick="selectClient(${JSON.stringify(client).replace(/"/g, '&quot;')})">
+                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                    <span class="client-name">${client.first_name} ${client.last_name}</span>
+                </div>
+            `).join('');
+
+            optionsDiv.innerHTML = html;
+        }
+
+        // Add all the other critical functions
+        function doRecordArrival() {
+            let firstName, surname;
+            
+            if (APP.currentUserType === 'client') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    const selectedClientId = document.getElementById('selectedClientId').value;
+                    if (!selectedClientId) {
+                        alert('Please select a client from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
+                    if (!selectedClient) {
+                        alert('Selected client not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedClient.first_name;
+                    surname = selectedClient.last_name;
+                } else {
+                    firstName = document.getElementById('firstName').value.trim();
+                    surname = document.getElementById('surname').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
+            } else if (APP.currentUserType === 'staff') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    const selectedStaffId = document.getElementById('selectedStaffId').value;
+                    if (!selectedStaffId) {
+                        alert('Please select a staff member from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
+                    if (!selectedStaff) {
+                        alert('Selected staff member not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedStaff.first_name;
+                    surname = selectedStaff.last_name;
+                } else {
+                    firstName = document.getElementById('firstName').value.trim();
+                    surname = document.getElementById('surname').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
+            } else {
+                // For visitors - always use text input
+                firstName = document.getElementById('firstName').value.trim();
+                surname = document.getElementById('surname').value.trim();
+                
+                if (!firstName || !surname) {
+                    alert('Please enter both first name and surname.');
+                    return;
+                }
+            }
+
+            const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
+            const mobile = document.getElementById('mobile') ? document.getElementById('mobile').value.trim() : '';
+
+            const data = {
+                firstName: firstName,
+                surname: surname,
+                email: email || 'Not provided',
+                mobile: mobile || 'Not provided',
+                userType: APP.currentUserType,
+                location: getLocationName(),
+                arrivalDate: new Date().toLocaleDateString(),
+                arrivalTime: new Date().toLocaleTimeString(),
+                status: 'arrived',
+                timestamp: new Date().toISOString()
+            };
+
+            saveToStorage(data);
+            showSuccess(`🎉 Welcome, ${firstName} ${surname}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
+        }
+
+        function doRecordDeparture() {
+            let firstName, surname;
+            
+            // Check if this is a client departure with dropdown selection
+            if (APP.currentUserType === 'client') {
+                const currentLocation = getLocationName();
+                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
+                    const selectedClientId = document.getElementById('selectedDepartureClientId').value;
+                    if (!selectedClientId) {
+                        alert('Please select a client from the dropdown.');
+                        return;
+                    }
+                    
+                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
+                    if (!selectedClient) {
+                        alert('Selected client not found. Please try again.');
+                        return;
+                    }
+                    
+                    firstName = selectedClient.first_name;
+                    surname = selectedClient.last_name;
+                } else {
+                    // For other locations, use text input
+                    firstName = document.getElementById('leaveFirst').value.trim();
+                    surname = document.getElementById('leaveLast').value.trim();
+                    
+                    if (!firstName || !surname) {
+                        alert('Please enter both first name and surname.');
+                        return;
+                    }
+                }
+            } else if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
+                const selectedStaffId = document.getElementById('selectedDepartureStaffId').value;
+                if (!selectedStaffId) {
+                    alert('Please select a staff member from the dropdown.');
+                    return;
+                }
+                
+                const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
+                if (!selectedStaff) {
+                    alert('Selected staff member not found. Please try again.');
+                    return;
+                }
+                
+                firstName = selectedStaff.first_name;
+                surname = selectedStaff.last_name;
+            } else {
+                // For visitors and staff at other locations, use text input
+                firstName = document.getElementById('leaveFirst').value.trim();
+                surname = document.getElementById('leaveLast').value.trim();
+                
+                if (!firstName || !surname) {
+                    alert('Please enter both first name and surname.');
+                    return;
+                }
+            }
+
+            currentDepartingVisitor = {
+                firstName: firstName,
+                surname: surname,
+                email: 'Not provided',
+                mobile: 'Not provided',
+                userType: APP.currentUserType,
+                location: getLocationName(),
+                departureDate: new Date().toLocaleDateString(),
+                departureTime: new Date().toLocaleTimeString(),
+                status: 'departed',
+                timestamp: new Date().toISOString()
+            };
+
+            if (APP.currentUserType === 'visitor') {
+                showPage('feedbackPage');
+                setupStarRatings();
+                saveSessionState(); // Save state when on feedback page
+            } else if (APP.currentUserType === 'staff') {
+                saveToStorage(currentDepartingVisitor);
+                showSuccess(`😊 Thank you for today ${firstName} ${surname}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
+            } else if (APP.currentUserType === 'client') {
+                saveToStorage(currentDepartingVisitor);
+                showSuccess(`☀️ We hope you had the best day ${firstName} ${surname}, see you soon!`, 'Your departure has been recorded.');
+            }
+        }
+
+        function saveToStorage(data) {
+            console.log('💾 saveToStorage() called with:', data); // DEBUG LINE
+            try {
+                // Get existing data
+                const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
+                
+                // Check if this is a departure - try to find matching arrival record
+                if (data.status === 'departed') {
+                    const matchingIndex = findMatchingArrival(existingData, data);
+                    
+                    if (matchingIndex !== -1) {
+                        console.log('Found matching arrival record, updating existing entry');
+                        // Update the existing record with departure info
+                        const existingRecord = existingData[matchingIndex];
+                        
+                        // Keep the original arrival data and add departure data
+                        existingData[matchingIndex] = {
+                            ...existingRecord, // Keep all original data (email, mobile, arrival times)
+                            // Update with departure information
+                            departureDate: data.departureDate,
+                            departureTime: data.departureTime,
+                            status: 'departed',
+                            timestamp: data.timestamp, // Update timestamp to departure time
+                            // Add feedback if it exists (only visitors provide feedback)
+                            ...(data.feedback ? { feedback: data.feedback } : {})
+                        };
+                        
+                        console.log('Updated existing record:', existingData[matchingIndex]);
+                    } else {
+                        console.log('No matching arrival found, creating new departure record');
+                        // No matching arrival found, create new record
+                        existingData.unshift(data);
+                    }
+                } else {
+                    console.log('New arrival record');
+                    // This is an arrival, just add it normally
+                    existingData.unshift(data);
+                }
+                
+                // Save back to localStorage
+                localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
+                console.log('Data saved successfully to localStorage');
+                
+                // Send to Supabase - WORKING VERSION
+                console.log('📤 Sending to Supabase...');
+                
+                const supabaseData = {
+                    first_name: data.firstName || null,
+                    surname: data.surname || null,
+                    email: data.email === 'Not provided' ? null : data.email,
+                    mobile: data.mobile === 'Not provided' ? null : data.mobile,
+                    user_type: data.userType || null,
+                    location: data.location || null,
+                    status: data.status || null,
+                    arrival_date: data.arrivalDate || null,
+                    arrival_time: data.arrivalTime || null,
+                    departure_date: data.departureDate || null,
+                    departure_time: data.departureTime || null,
+                    feedback_overall: data.feedback?.overall || null,
+                    feedback_safety: data.feedback?.safety || null,
+                    feedback_responsive: data.feedback?.responsive || null,
+                    feedback_caring: data.feedback?.caring || null,
+                    feedback_leadership: data.feedback?.leadership || null,
+                    feedback_effectiveness: data.feedback?.effectiveness || null,
+                    feedback_average: data.feedback ? calculateFeedbackAverage(data.feedback) : null,
+                    feedback_comments: data.feedback?.additionalComments || null
+                };
+                
+                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/visitors`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(supabaseData)
+                })
+                .then(response => {
+                    console.log('📡 Supabase response status:', response.status);
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text}`);
+                        });
+                    }
+                })
+                .then(result => {
+                    console.log('✅ Data synced to Supabase successfully:', result);
+                })
+                .catch(error => {
+                    console.error('❌ Supabase sync error:', error);
+                });
+                
+                return true;
+            } catch (error) {
+                console.log('Save failed:', error);
+                return false;
+            }
+        }
+
+        function findMatchingArrival(existingData, departureData) {
+            // Look for a matching person who has arrived but not yet departed
+            // Match based on name, user type, and location on the same day
+            const departureDate = departureData.departureDate;
+            
+            for (let i = 0; i < existingData.length; i++) {
+                const record = existingData[i];
+                
+                // Check if names match (case insensitive, flexible matching)
+                const firstNameMatch = record.firstName.toLowerCase().trim() === departureData.firstName.toLowerCase().trim();
+                const surnameMatch = record.surname.toLowerCase().trim() === departureData.surname.toLowerCase().trim();
+                
+                // Check other criteria
+                const userTypeMatch = record.userType === departureData.userType;
+                const locationMatch = record.location === departureData.location;
+                const statusMatch = record.status === 'arrived'; // Only match with arrivals
+                const sameDayMatch = record.arrivalDate === departureDate; // Same day
+                
+                if (firstNameMatch && surnameMatch && userTypeMatch && locationMatch && statusMatch && sameDayMatch) {
+                    console.log('Found matching arrival:', record);
+                    return i;
+                }
+            }
+            
+            console.log('No matching arrival found for:', departureData.firstName, departureData.surname);
+            return -1; // No match found
+        }
+
+        function showSuccess(personalMessage, systemMessage) {
+            document.getElementById('successMsg').textContent = personalMessage;
+            document.getElementById('successDetails').textContent = systemMessage;
+            showPage('successPage');
+            saveSessionState(); // Save state when showing success page
+            startCountdown();
+        }
+
+        function startCountdown() {
+            let seconds = 5;
+            const countdownEl = document.getElementById('countdown');
+            
+            const updateCountdown = () => {
+                countdownEl.textContent = `Returning in ${seconds} seconds...`;
+                seconds--;
+                
+                if (seconds < 0) {
+                    APP.currentUserType = '';
+                    document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+                    showPage('userTypeSelect');
+                    saveSessionState(); // Save state when countdown completes
+                } else {
+                    setTimeout(updateCountdown, 1000);
+                }
+            };
+            
+            updateCountdown();
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function doGoBack() {
+            // Determine where to go back to based on current context
+            const activePage = document.querySelector('.page.active').id;
+            
+            if (activePage === 'staffAuthPage' || activePage === 'clientManagementPage' || activePage === 'addClientPage') {
+                if (activePage === 'addClientPage') {
+                    showPage('clientManagementPage');
+                } else if (activePage === 'clientManagementPage') {
+                    showPage('arrivingPage');
+                    buildArrivalForm(); // Rebuild the form to show the client dropdown again
+                } else {
+                    showPage('arrivingPage');
+                    buildArrivalForm();
+                }
+            } else if (activePage === 'staffManagementPage' || activePage === 'addStaffPage') {
+                if (activePage === 'addStaffPage') {
+                    showPage('staffManagementPage');
+                } else if (activePage === 'staffManagementPage') {
+                    showPage('arrivingPage');
+                    buildArrivalForm(); // Rebuild the form to show the staff dropdown again
+                } else {
+                    showPage('arrivingPage');
+                    buildArrivalForm();
+                }
+            } else {
+                showPage('userTypeSelect');
+            }
+            saveSessionState(); // Save state when going back
+        }
+
+        function adminReset() {
+            // Only allow admin reset if user is logged in
+            if (!APP.company || APP.company === '') {
+                return; // Do nothing if not logged in
+            }
+            
+            APP.adminClicks++;
+            setTimeout(() => { APP.adminClicks = 0; }, 2000);
+            if (APP.adminClicks >= 3) {
+                // Clear location data
+                APP.currentBusiness = '';
+                APP.currentUserType = '';
+                document.getElementById('businessDropdown').value = '';
+                document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Remove location backgrounds and reset location display
+                document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+                document.getElementById('locationName').style.display = 'none';
+                document.getElementById('locationName').textContent = '';
+                
+                // Update header to show company but no location
+                updateHeader();
+                
+                // Update session
+                saveSessionState();
+                
+                showPage('businessSelect');
+            }
+        }
+
+        // Session state management
+        function saveSessionState() {
+            const sessionState = {
+                company: APP.company,
+                locations: APP.locations,
+                currentBusiness: APP.currentBusiness,
+                currentUserType: APP.currentUserType,
+                isLoggedIn: APP.company !== '',
+                currentPage: getCurrentActivePage(),
+                // Save departing visitor data for feedback page restoration
+                currentDepartingVisitor: currentDepartingVisitor
+            };
+            localStorage.setItem('hellohubSession', JSON.stringify(sessionState));
+        }
+
+        function getCurrentActivePage() {
+            const activePages = document.querySelectorAll('.page.active');
+            if (activePages.length > 0) {
+                return activePages[0].id;
+            }
+            return 'loginPage';
+        }
+
+        function restoreSessionState() {
+            // First, check for auto-login
+            const autoLoggedIn = checkAutoLogin();
+            
+            const savedSession = localStorage.getItem('hellohubSession');
+            
+            // Check if this is a fresh browser session (new tab/window)
+            const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
+            
+            // Mark this browser tab as active
+            sessionStorage.setItem('hellohubActive', 'true');
+            
+            if (autoLoggedIn) {
+                console.log('Auto-login successful');
+                
+                if (savedSession) {
+                    try {
+                        const sessionState = JSON.parse(savedSession);
+                        
+                        // Restore business and user type if available
+                        if (sessionState.currentBusiness) {
+                            APP.currentBusiness = sessionState.currentBusiness;
+                            document.getElementById('businessDropdown').value = APP.currentBusiness;
+                            updateHeader();
+                            fastSwitchLocation();
+                            
+                            if (sessionState.currentUserType) {
+                                APP.currentUserType = sessionState.currentUserType;
+                                document.querySelectorAll('.user-type-btn').forEach(btn => {
+                                    btn.classList.remove('active');
+                                    if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
+                                        btn.classList.add('active');
+                                    }
+                                });
+                                showPageWithoutSaving('userTypeSelect');
+                            } else {
+                                showPageWithoutSaving('userTypeSelect');
+                            }
+                        } else {
+                            showPageWithoutSaving('businessSelect');
+                        }
+                        
+                        saveSessionState();
+                        return;
+                        
+                    } catch (error) {
+                        console.log('Error parsing session after auto-login');
+                        showPageWithoutSaving('businessSelect');
+                        return;
+                    }
+                } else {
+                    // Auto-logged in but no session data
+                    showPageWithoutSaving('businessSelect');
+                    return;
+                }
+            }
+            
+            // If no auto-login, start fresh
+            if (savedSession) {
+                try {
+                    const sessionState = JSON.parse(savedSession);
+                    
+                    // Check if we have a complete, valid session
+                    const hasCompleteSession = sessionState.isLoggedIn && 
+                                              sessionState.company && 
+                                              sessionState.locations && 
+                                              sessionState.locations.length > 0;
+                    
+                    if (hasCompleteSession && !isNewBrowserSession) {
+                        // Browser refresh: Restore full state
+                        console.log('Browser refresh detected, restoring full state');
+                        
+                        APP.company = sessionState.company;
+                        APP.locations = sessionState.locations;
+                        APP.currentBusiness = sessionState.currentBusiness || '';
+                        APP.currentUserType = sessionState.currentUserType || '';
+                        
+                        setupBusinessDropdown();
+                        if (APP.currentBusiness) {
+                            document.getElementById('businessDropdown').value = APP.currentBusiness;
+                            updateHeader();
+                            fastSwitchLocation();
+                        }
+                        
+                        if (APP.currentUserType) {
+                            document.querySelectorAll('.user-type-btn').forEach(btn => {
+                                btn.classList.remove('active');
+                                if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
+                                    btn.classList.add('active');
+                                }
+                            });
+                        }
+                        
+                        showPageWithoutSaving(sessionState.currentPage || 'userTypeSelect');
+                    } else {
+                        console.log('Fresh session or incomplete state, starting at login');
+                        localStorage.removeItem('hellohubSession');
+                        resetToLoginPage();
+                    }
+                } catch (error) {
+                    console.log('Error parsing session, starting fresh');
+                    localStorage.removeItem('hellohubSession');
+                    resetToLoginPage();
+                }
+            } else {
+                console.log('No saved session, starting at login page');
+                resetToLoginPage();
+            }
+        }
+
+        function resetToLoginPage() {
+            APP.company = '';
+            APP.locations = [];
+            APP.currentBusiness = '';
+            APP.currentUserType = '';
+            
+            document.getElementById('headerTitle').textContent = '👋 HelloHub';
+            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
+            document.getElementById('locationName').style.display = 'none';
+            document.getElementById('locationName').textContent = ''; // Clear any leftover text
+            document.getElementById('headerLogo').style.display = 'none';
+            
+            document.body.classList.remove('alex-davis-logged-in');
+            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+            
+            showPageWithoutSaving('loginPage');
+        }
+
+        function showPageWithoutSaving(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // Add remaining helper functions
+        function populateStaffOptions() {
+            // Similar to client options but for staff
+            const optionsDiv = document.getElementById('staffOptions');
+            if (!optionsDiv) return;
+
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    populateStaffOptionsInternal();
+                });
+            } else {
+                populateStaffOptionsInternal();
+            }
+        }
+
+        function populateStaffOptionsInternal() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => 
+                (staff.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+            );
+
+            if (locationStaff.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
+                return;
+            }
+
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            optionsDiv.innerHTML = '';
+            locationStaff.forEach(staff => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectStaff(staff);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleStaffOptions() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                ultraFastPopulateStaff();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function ultraFastPopulateStaff() {
+            const optionsDiv = document.getElementById('staffOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            
+            const cachedData = dataCache.staff.get(currentLocation);
+            if (cachedData) {
+                const locationStaff = cachedData.data.filter(staff => 
+                    (staff.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+                );
+                
+                renderStaffOptions(optionsDiv, locationStaff, currentLocation);
+                return;
+            }
+            
+            optionsDiv.innerHTML = '<div class="client-option" style="padding: 15px; text-align: center; color: #666;">⚡ Loading...</div>';
+            
+            loadStaffProfilesForLocation(currentLocation).then(data => {
+                staffProfiles = data;
+                const locationStaff = data.filter(staff => 
+                    (staff.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+                );
+                renderStaffOptions(optionsDiv, locationStaff, currentLocation);
+            });
+        }
+
+        function renderStaffOptions(optionsDiv, staff, location) {
+            if (staff.length === 0) {
+                optionsDiv.innerHTML = `<div class="client-option" style="color: #666; font-style: italic; padding: 15px; text-align: center;">No staff for ${location}</div>`;
+                return;
+            }
+
+            staff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            const html = staff.map(member => `
+                <div class="client-option" onclick="selectStaff(${JSON.stringify(member).replace(/"/g, '&quot;')})">
+                    <img class="client-photo" src="${member.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${member.first_name} ${member.last_name}">
+                    <span class="client-name">${member.first_name} ${member.last_name}</span>
+                </div>
+            `).join('');
+
+            optionsDiv.innerHTML = html;
+        }
+
+        function selectStaff(staff) {
+            document.getElementById('staffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
+            document.getElementById('selectedStaffId').value = staff.id;
+            document.getElementById('staffOptions').style.display = 'none';
+        }
+
+        function populateDepartureClientOptions() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (!optionsDiv) return;
+
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    populateDepartureClientOptionsInternal();
+                });
+            } else {
+                populateDepartureClientOptionsInternal();
+            }
+        }
+
+        function populateDepartureClientOptionsInternal() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationClients = clientProfiles.filter(client => 
+                (client.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+            );
+
+            if (locationClients.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
+                return;
+            }
+
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            optionsDiv.innerHTML = '';
+            locationClients.forEach(client => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectDepartureClient(client);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                    <span class="client-name">${client.first_name} ${client.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleDepartureClientOptions() {
+            const optionsDiv = document.getElementById('departureClientOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                showLoadingOptions('departureClientOptions');
+                populateDepartureClientOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectDepartureClient(client) {
+            document.getElementById('departureClientSelect').textContent = `${client.first_name} ${client.last_name}`;
+            document.getElementById('selectedDepartureClientId').value = client.id;
+            document.getElementById('departureClientOptions').style.display = 'none';
+        }
+
+        function populateDepartureStaffOptions() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (!optionsDiv) return;
+
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    populateDepartureStaffOptionsInternal();
+                });
+            } else {
+                populateDepartureStaffOptionsInternal();
+            }
+        }
+
+        function populateDepartureStaffOptionsInternal() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (!optionsDiv) return;
+
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => 
+                (staff.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+            );
+
+            if (locationStaff.length === 0) {
+                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
+                return;
+            }
+
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            optionsDiv.innerHTML = '';
+            locationStaff.forEach(staff => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option';
+                optionDiv.onclick = () => selectDepartureStaff(staff);
+                
+                optionDiv.innerHTML = `
+                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
+                `;
+                
+                optionsDiv.appendChild(optionDiv);
+            });
+        }
+
+        function toggleDepartureStaffOptions() {
+            const optionsDiv = document.getElementById('departureStaffOptions');
+            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
+                optionsDiv.style.display = 'block';
+                showLoadingOptions('departureStaffOptions');
+                populateDepartureStaffOptions();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectDepartureStaff(staff) {
+            document.getElementById('departureStaffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
+            document.getElementById('selectedDepartureStaffId').value = staff.id;
+            document.getElementById('departureStaffOptions').style.display = 'none';
+        }
+
+        function showClientSettings() {
+            showPage('staffAuthPage');
+            saveSessionState();
+        }
+
+        function showStaffSettings() {
+            showPage('staffAuthPage');
+            saveSessionState();
+        }
+
+        function doStaffLogin() {
+            const password = document.getElementById('staffPassword').value.trim();
+            
+            if (!password) {
+                showStaffError('Please enter the staff password.');
+                return;
+            }
+            
+            if (password === 'office927') {
+                document.getElementById('staffPassword').value = '';
+                hideStaffError();
+                
+                // Check if we're managing staff or clients
+                if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
+                    showPage('staffManagementPage');
+                    document.getElementById('currentStaffLocationSpan').textContent = getLocationName();
+                    displayStaffList();
+                } else {
+                    showPage('clientManagementPage');
+                    document.getElementById('currentLocationSpan').textContent = getLocationName();
+                    displayClientList();
+                }
+                saveSessionState();
+            } else {
+                showStaffError('Invalid staff password.');
+            }
+        }
+
+        function showStaffError(message) {
+            const errorDiv = document.getElementById('staffLoginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideStaffError() {
+            document.getElementById('staffLoginError').style.display = 'none';
+        }
+
+        function displayClientList() {
+            const clientListDiv = document.getElementById('clientList');
+            const currentLocation = getLocationName();
+            
+            if (clientProfiles.length === 0) {
+                loadClientProfiles().then(() => {
+                    displayClientListInternal();
+                });
+            } else {
+                displayClientListInternal();
+            }
+        }
+
+        function displayClientListInternal() {
+            const clientListDiv = document.getElementById('clientList');
+            const currentLocation = getLocationName();
+            const locationClients = clientProfiles.filter(client => 
+                (client.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+            );
+
+            if (locationClients.length === 0) {
+                clientListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No clients registered for this location yet.</div>';
+                return;
+            }
+
+            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            let html = '';
+            locationClients.forEach(client => {
+                html += `
+                    <div class="client-card">
+                        <img class="client-card-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
+                        <div class="client-card-info">
+                            <div class="client-card-name">${client.first_name} ${client.last_name}</div>
+                            <div class="client-card-location">${client.location}</div>
+                        </div>
+                        <div class="client-card-actions">
+                            <button class="btn btn-primary btn-small" onclick="editClient(${client.id})">✏️ Edit</button>
+                            <button class="btn btn-warning btn-small" onclick="deleteClient(${client.id})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            clientListDiv.innerHTML = html;
+        }
+
+        function displayStaffList() {
+            const staffListDiv = document.getElementById('staffList');
+            const currentLocation = getLocationName();
+            
+            if (staffProfiles.length === 0) {
+                loadStaffProfiles().then(() => {
+                    displayStaffListInternal();
+                });
+            } else {
+                displayStaffListInternal();
+            }
+        }
+
+        function displayStaffListInternal() {
+            const staffListDiv = document.getElementById('staffList');
+            const currentLocation = getLocationName();
+            const locationStaff = staffProfiles.filter(staff => 
+                (staff.location || '').trim().toLowerCase() === currentLocation.trim().toLowerCase()
+            );
+
+            if (locationStaff.length === 0) {
+                staffListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No staff registered for this location yet.</div>';
+                return;
+            }
+
+            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+            let html = '';
+            locationStaff.forEach(staff => {
+                html += `
+                    <div class="client-card">
+                        <img class="client-card-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
+                        <div class="client-card-info">
+                            <div class="client-card-name">${staff.first_name} ${staff.last_name}</div>
+                            <div class="client-card-location">${staff.location}</div>
+                        </div>
+                        <div class="client-card-actions">
+                            <button class="btn btn-primary btn-small" onclick="editStaff(${staff.id})">✏️ Edit</button>
+                            <button class="btn btn-warning btn-small" onclick="deleteStaff(${staff.id})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            staffListDiv.innerHTML = html;
+        }
+
+        function setupStarRatings() {
+            const starRatings = document.querySelectorAll('.star-rating');
+            
+            // First, reset all star ratings to fresh state
+            starRatings.forEach(rating => {
+                rating.dataset.selectedRating = '0'; // Reset to no rating
+                const stars = rating.querySelectorAll('.star');
+                stars.forEach(star => {
+                    star.classList.remove('selected');
+                    star.style.opacity = '0.3';
+                    star.style.transform = 'scale(1)';
+                });
+            });
+            
+            starRatings.forEach(rating => {
+                const stars = rating.querySelectorAll('.star');
+                
+                stars.forEach((star, index) => {
+                    star.addEventListener('click', function() {
+                        const selectedRating = parseInt(this.dataset.rating);
+                        
+                        // Clear all stars first
+                        stars.forEach(s => s.classList.remove('selected'));
+                        
+                        // Light up all stars from 1 to the selected rating
+                        for (let i = 0; i < selectedRating; i++) {
+                            stars[i].classList.add('selected');
+                        }
+                        
+                        // Store the rating
+                        rating.dataset.selectedRating = selectedRating;
+                        
+                        console.log(`Rated ${rating.dataset.question}: ${selectedRating} stars`);
+                    });
+                    
+                    // Hover effect - show preview of what would be selected
+                    star.addEventListener('mouseenter', function() {
+                        const hoverRating = parseInt(this.dataset.rating);
+                        stars.forEach((s, i) => {
+                            if (i < hoverRating) {
+                                s.style.opacity = '0.8';
+                                s.style.transform = 'scale(1.05)';
+                            } else {
+                                s.style.opacity = '0.3';
+                                s.style.transform = 'scale(1)';
+                            }
+                        });
+                    });
+                    
+                    // Reset hover effect
+                    star.addEventListener('mouseleave', function() {
+                        const selectedRating = rating.dataset.selectedRating || 0;
+                        stars.forEach((s, i) => {
+                            if (i < selectedRating) {
+                                s.style.opacity = '1';
+                                s.style.transform = 'scale(1)';
+                                s.classList.add('selected');
+                            } else {
+                                s.style.opacity = '0.3';
+                                s.style.transform = 'scale(1)';
+                                s.classList.remove('selected');
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        function doSubmitFeedback() {
+            const ratings = {};
+            const starRatings = document.querySelectorAll('.star-rating');
+            
+            starRatings.forEach(rating => {
+                const questionName = rating.dataset.question;
+                const selectedRating = rating.dataset.selectedRating || 0;
+                ratings[questionName] = parseInt(selectedRating);
+            });
+            
+            const additionalFeedback = document.getElementById('additionalFeedback').value.trim();
+            
+            currentDepartingVisitor.feedback = {
+                overall: ratings.overall || 0,
+                safety: ratings.safety || 0,
+                responsive: ratings.responsive || 0,
+                caring: ratings.caring || 0,
+                leadership: ratings.leadership || 0,
+                effectiveness: ratings.effectiveness || 0,
+                additionalComments: additionalFeedback || 'No additional comments'
+            };
+            
+            saveToStorage(currentDepartingVisitor);
+            showSuccess(`💝 Thank you for visiting ${currentDepartingVisitor.firstName} ${currentDepartingVisitor.surname}, we value your feedback about our home.`, 'Your departure and feedback have been recorded.');
+        }
+
+        // Logout timer functionality
+        let logoutTimer = null;
+        let logoutProgress = 0;
+
+        function startLogoutTimer() {
+            const logo = document.getElementById('headerLogo');
+            if (!logo || logo.style.display === 'none') return;
+            
+            logoutProgress = 0;
+            
+            logoutTimer = setInterval(() => {
+                logoutProgress += 100; // 100ms intervals
+                
+                // Visual feedback - darken the logo progressively
+                const opacity = 1 - (logoutProgress / 6000) * 0.7; // Darken to 30% opacity
+                logo.style.opacity = opacity;
+                
+                if (logoutProgress >= 6000) { // 6 seconds
+                    performLogout();
+                    cancelLogoutTimer();
+                }
+            }, 100);
+        }
+
+        function cancelLogoutTimer() {
+            if (logoutTimer) {
+                clearInterval(logoutTimer);
+                logoutTimer = null;
+                
+                // Reset logo appearance
+                const logo = document.getElementById('headerLogo');
+                if (logo) {
+                    logo.style.opacity = 1;
+                }
+            }
+        }
+
+        function performLogout() {
+            // Clear saved login
+            localStorage.removeItem('hellohubAuth');
+            
+            // Reset all APP data
+            APP.currentBusiness = '';
+            APP.currentUserType = '';
+            APP.company = '';
+            APP.locations = [];
+            
+            // Reset UI elements
+            document.getElementById('businessDropdown').value = '';
+            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('headerTitle').textContent = '👋 HelloHub';
+            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
+            
+            // Clear location name completely
+            document.getElementById('locationName').style.display = 'none';
+            document.getElementById('locationName').textContent = '';
+            
+            // Remove all background classes and hide logo
+            document.body.classList.remove('alex-davis-logged-in');
+            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+            document.getElementById('headerLogo').style.display = 'none';
+            document.getElementById('headerLogo').style.opacity = 1;
+            
+            // Clear session data
+            localStorage.removeItem('hellohubSession');
+            
+            // Go back to login page
+            showPage('loginPage');
+        }
+
+        // Initialize when page loads
+        
+        // Add Enter key support and event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('emailAddress').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') doLogin();
+            });
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') doLogin();
+            });
+            
+            // Add click outside to close client dropdown
+            document.addEventListener('click', function(e) {
+                // Close arrival dropdown
+                const dropdown = document.getElementById('clientOptions');
+                const select = document.getElementById('clientSelect');
+                if (dropdown && select && !select.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+                
+                // Close departure dropdown
+                const departureDropdown = document.getElementById('departureClientOptions');
+                const departureSelect = document.getElementById('departureClientSelect');
+                if (departureDropdown && departureSelect && !departureSelect.contains(e.target) && !departureDropdown.contains(e.target)) {
+                    departureDropdown.style.display = 'none';
+                }
+            });
+            
+            // Restore session state from localStorage
+            restoreSessionState();
+        });
+
         // Client Management Functions
         function loadClientProfiles() {
             const currentLocation = getLocationName();
@@ -1048,61 +2522,6 @@
             });
         }
 
-        function populateClientOptions() {
-            const optionsDiv = document.getElementById('clientOptions');
-            if (!optionsDiv) return;
-
-            // Ensure client profiles are loaded before populating
-            if (clientProfiles.length === 0) {
-                loadClientProfiles().then(() => {
-                    populateClientOptionsInternal();
-                });
-            } else {
-                populateClientOptionsInternal();
-            }
-        }
-
-        function populateClientOptionsInternal() {
-            const optionsDiv = document.getElementById('clientOptions');
-            if (!optionsDiv) return;
-
-            const currentLocation = getLocationName();
-            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
-
-            if (locationClients.length === 0) {
-                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
-                return;
-            }
-
-            // Sort clients alphabetically by first name
-            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
-
-            optionsDiv.innerHTML = '';
-            locationClients.forEach(client => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'client-option';
-                optionDiv.onclick = () => selectClient(client);
-                
-                optionDiv.innerHTML = `
-                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
-                    <span class="client-name">${client.first_name} ${client.last_name}</span>
-                `;
-                
-                optionsDiv.appendChild(optionDiv);
-            });
-        }
-
-        function toggleClientOptions() {
-            const optionsDiv = document.getElementById('clientOptions');
-            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
-                optionsDiv.style.display = 'block';
-                populateClientOptions();
-            } else {
-                optionsDiv.style.display = 'none';
-            }
-        }
-
-        // Staff Management Functions (Similar to Client Management)
         function loadStaffProfiles() {
             const currentLocation = getLocationName();
             if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
@@ -1131,180 +2550,205 @@
             });
         }
 
-        function populateStaffOptions() {
-            const optionsDiv = document.getElementById('staffOptions');
-            if (!optionsDiv) return;
+        function showAddClientForm() {
+            editingClientId = null;
+            document.getElementById('clientFormTitle').textContent = 'Add New Client';
+            document.getElementById('clientFirstName').value = '';
+            document.getElementById('clientLastName').value = '';
+            document.getElementById('clientLocation').value = getLocationName();
+            resetPhotoPreview();
+            showPage('addClientPage');
+            saveSessionState();
+        }
 
-            // Ensure staff profiles are loaded before populating
-            if (staffProfiles.length === 0) {
-                loadStaffProfiles().then(() => {
-                    populateStaffOptionsInternal();
-                });
+        function editClient(clientId) {
+            const client = clientProfiles.find(c => c.id === clientId);
+            if (!client) return;
+
+            editingClientId = clientId;
+            document.getElementById('clientFormTitle').textContent = 'Edit Client';
+            document.getElementById('clientFirstName').value = client.first_name;
+            document.getElementById('clientLastName').value = client.last_name;
+            document.getElementById('clientLocation').value = client.location;
+            
+            if (client.photo_url) {
+                document.getElementById('photoPreview').src = client.photo_url;
             } else {
-                populateStaffOptionsInternal();
+                resetPhotoPreview();
+            }
+            
+            showPage('addClientPage');
+            saveSessionState();
+        }
+
+        function deleteClient(clientId) {
+            const client = clientProfiles.find(c => c.id === clientId);
+            if (!client) return;
+
+            if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
+                // Remove from local array IMMEDIATELY
+                clientProfiles = clientProfiles.filter(c => c.id !== clientId);
+                displayClientList();
+                
+                // Delete from Supabase in background
+                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Client deleted from Supabase');
+                    } else {
+                        console.log('⚠️ Supabase delete failed, but local delete successful');
+                    }
+                })
+                .catch(error => {
+                    console.error('⚠️ Background delete failed:', error);
+                });
             }
         }
 
-        function populateStaffOptionsInternal() {
-            const optionsDiv = document.getElementById('staffOptions');
-            if (!optionsDiv) return;
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
 
-            const currentLocation = getLocationName();
-            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
+        function resetPhotoPreview() {
+            document.getElementById('photoPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E";
+        }
 
-            if (locationStaff.length === 0) {
-                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
+        function saveClientProfile() {
+            const firstName = document.getElementById('clientFirstName').value.trim();
+            const lastName = document.getElementById('clientLastName').value.trim();
+            const location = document.getElementById('clientLocation').value;
+            const photoFile = document.getElementById('clientPhoto').files[0];
+
+            if (!firstName || !lastName || !location) {
+                alert('Please fill in all required fields.');
                 return;
             }
 
-            // Sort staff alphabetically by first name
-            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
+            const saveToDatabase = (photoUrl = null) => {
+                const clientData = {
+                    first_name: firstName,
+                    last_name: lastName,
+                    location: location,
+                    photo_url: photoUrl
+                };
 
-            optionsDiv.innerHTML = '';
-            locationStaff.forEach(staff => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'client-option';
-                optionDiv.onclick = () => selectStaff(staff);
-                
-                optionDiv.innerHTML = `
-                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
-                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
-                `;
-                
-                optionsDiv.appendChild(optionDiv);
+                if (editingClientId) {
+                    // Update existing client in local array IMMEDIATELY
+                    const index = clientProfiles.findIndex(c => c.id === editingClientId);
+                    if (index !== -1) {
+                        clientProfiles[index] = { ...clientProfiles[index], ...clientData };
+                    }
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('clientManagementPage');
+                    displayClientList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background (async)
+                    updateClientInSupabase(editingClientId, clientData);
+                } else {
+                    // Create temporary client object with fake ID for immediate display
+                    const tempClient = {
+                        id: Date.now(), // Temporary ID
+                        ...clientData,
+                        isTemporary: true
+                    };
+                    
+                    // Add to local array IMMEDIATELY
+                    clientProfiles.push(tempClient);
+                    
+                    // Show success and move to next screen INSTANTLY (no popup)
+                    showPage('clientManagementPage');
+                    displayClientList();
+                    saveSessionState();
+                    
+                    // Upload to Supabase in the background and update with real ID
+                    createClientInSupabase(clientData, tempClient);
+                }
+            };
+
+            // For simplicity, we'll use data URLs for photos instead of file upload
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveToDatabase(e.target.result);
+                };
+                reader.readAsDataURL(photoFile);
+            } else if (editingClientId) {
+                // Keep existing photo for edits
+                const existingClient = clientProfiles.find(c => c.id === editingClientId);
+                saveToDatabase(existingClient ? existingClient.photo_url : null);
+            } else {
+                saveToDatabase();
+            }
+        }
+
+        // Background Supabase operations
+        function createClientInSupabase(clientData, tempClient) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles`, {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(clientData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Client uploaded to Supabase:', data);
+                // Update the temporary client with real Supabase ID
+                const tempIndex = clientProfiles.findIndex(c => c.id === tempClient.id);
+                if (tempIndex !== -1 && data[0]) {
+                    clientProfiles[tempIndex] = { ...data[0], isTemporary: false };
+                }
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase upload failed:', error);
             });
         }
 
-        function toggleStaffOptions() {
-            const optionsDiv = document.getElementById('staffOptions');
-            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
-                optionsDiv.style.display = 'block';
-                populateStaffOptions();
-            } else {
-                optionsDiv.style.display = 'none';
-            }
-        }
-
-        function selectStaff(staff) {
-            document.getElementById('staffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
-            document.getElementById('selectedStaffId').value = staff.id;
-            document.getElementById('staffOptions').style.display = 'none';
-        }
-
-        // Staff departure functions
-        function populateDepartureStaffOptions() {
-            const optionsDiv = document.getElementById('departureStaffOptions');
-            if (!optionsDiv) return;
-
-            // Ensure staff profiles are loaded before populating
-            if (staffProfiles.length === 0) {
-                loadStaffProfiles().then(() => {
-                    populateDepartureStaffOptionsInternal();
-                });
-            } else {
-                populateDepartureStaffOptionsInternal();
-            }
-        }
-
-        function populateDepartureStaffOptionsInternal() {
-            const optionsDiv = document.getElementById('departureStaffOptions');
-            if (!optionsDiv) return;
-
-            const currentLocation = getLocationName();
-            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
-
-            if (locationStaff.length === 0) {
-                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No staff registered for this location</div>';
-                return;
-            }
-
-            // Sort staff alphabetically by first name
-            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
-
-            optionsDiv.innerHTML = '';
-            locationStaff.forEach(staff => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'client-option';
-                optionDiv.onclick = () => selectDepartureStaff(staff);
-                
-                optionDiv.innerHTML = `
-                    <img class="client-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
-                    <span class="client-name">${staff.first_name} ${staff.last_name}</span>
-                `;
-                
-                optionsDiv.appendChild(optionDiv);
+        function updateClientInSupabase(clientId, clientData) {
+            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(clientData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Client updated in Supabase:', data);
+            })
+            .catch(error => {
+                console.error('⚠️ Background Supabase update failed:', error);
             });
         }
 
-        function toggleDepartureStaffOptions() {
-            const optionsDiv = document.getElementById('departureStaffOptions');
-            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
-                optionsDiv.style.display = 'block';
-                populateDepartureStaffOptions();
-            } else {
-                optionsDiv.style.display = 'none';
-            }
-        }
-
-        function selectDepartureStaff(staff) {
-            document.getElementById('departureStaffSelect').textContent = `${staff.first_name} ${staff.last_name}`;
-            document.getElementById('selectedDepartureStaffId').value = staff.id;
-            document.getElementById('departureStaffOptions').style.display = 'none';
-        }
-
-        function showStaffSettings() {
-            showPage('staffAuthPage');
+        function cancelAddClient() {
+            showPage('clientManagementPage');
             saveSessionState();
         }
 
         // Staff Management Functions
-        function displayStaffList() {
-            const staffListDiv = document.getElementById('staffList');
-            const currentLocation = getLocationName();
-            
-            // Ensure staff profiles are loaded before displaying
-            if (staffProfiles.length === 0) {
-                loadStaffProfiles().then(() => {
-                    displayStaffListInternal();
-                });
-            } else {
-                displayStaffListInternal();
-            }
-        }
-
-        function displayStaffListInternal() {
-            const staffListDiv = document.getElementById('staffList');
-            const currentLocation = getLocationName();
-            const locationStaff = staffProfiles.filter(staff => staff.location === currentLocation);
-
-            if (locationStaff.length === 0) {
-                staffListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No staff registered for this location yet.</div>';
-                return;
-            }
-
-            // Sort staff alphabetically by first name
-            locationStaff.sort((a, b) => a.first_name.localeCompare(b.first_name));
-
-            let html = '';
-            locationStaff.forEach(staff => {
-                html += `
-                    <div class="client-card">
-                        <img class="client-card-photo" src="${staff.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${staff.first_name} ${staff.last_name}">
-                        <div class="client-card-info">
-                            <div class="client-card-name">${staff.first_name} ${staff.last_name}</div>
-                            <div class="client-card-location">${staff.location}</div>
-                        </div>
-                        <div class="client-card-actions">
-                            <button class="btn btn-primary btn-small" onclick="editStaff(${staff.id})">✏️ Edit</button>
-                            <button class="btn btn-warning btn-small" onclick="deleteStaff(${staff.id})">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            staffListDiv.innerHTML = html;
-        }
-
         function showAddStaffForm() {
             editingStaffId = null;
             document.getElementById('staffFormTitle').textContent = 'Add New Staff Member';
@@ -1503,364 +2947,7 @@
             saveSessionState();
         }
 
-        function selectClient(client) {
-            document.getElementById('clientSelect').textContent = `${client.first_name} ${client.last_name}`;
-            document.getElementById('selectedClientId').value = client.id;
-            document.getElementById('clientOptions').style.display = 'none';
-        }
-
-        function populateDepartureClientOptions() {
-            const optionsDiv = document.getElementById('departureClientOptions');
-            if (!optionsDiv) return;
-
-            // Ensure client profiles are loaded before populating
-            if (clientProfiles.length === 0) {
-                loadClientProfiles().then(() => {
-                    populateDepartureClientOptionsInternal();
-                });
-            } else {
-                populateDepartureClientOptionsInternal();
-            }
-        }
-
-        function populateDepartureClientOptionsInternal() {
-            const optionsDiv = document.getElementById('departureClientOptions');
-            if (!optionsDiv) return;
-
-            const currentLocation = getLocationName();
-            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
-
-            if (locationClients.length === 0) {
-                optionsDiv.innerHTML = '<div class="client-option" style="color: #666; font-style: italic;">No clients registered for this location</div>';
-                return;
-            }
-
-            // Sort clients alphabetically by first name
-            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
-
-            optionsDiv.innerHTML = '';
-            locationClients.forEach(client => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'client-option';
-                optionDiv.onclick = () => selectDepartureClient(client);
-                
-                optionDiv.innerHTML = `
-                    <img class="client-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' font-size=\'12\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
-                    <span class="client-name">${client.first_name} ${client.last_name}</span>
-                `;
-                
-                optionsDiv.appendChild(optionDiv);
-            });
-        }
-
-        function toggleDepartureClientOptions() {
-            const optionsDiv = document.getElementById('departureClientOptions');
-            if (optionsDiv.style.display === 'none' || !optionsDiv.style.display) {
-                optionsDiv.style.display = 'block';
-                populateDepartureClientOptions();
-            } else {
-                optionsDiv.style.display = 'none';
-            }
-        }
-
-        function selectDepartureClient(client) {
-            document.getElementById('departureClientSelect').textContent = `${client.first_name} ${client.last_name}`;
-            document.getElementById('selectedDepartureClientId').value = client.id;
-            document.getElementById('departureClientOptions').style.display = 'none';
-        }
-
-        function showClientSettings() {
-            showPage('staffAuthPage');
-            saveSessionState();
-        }
-
-        function doStaffLogin() {
-            const password = document.getElementById('staffPassword').value.trim();
-            
-            if (!password) {
-                showStaffError('Please enter the staff password.');
-                return;
-            }
-            
-            if (password === 'office927') {
-                document.getElementById('staffPassword').value = '';
-                hideStaffError();
-                
-                // Check if we're managing staff or clients
-                if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
-                    showPage('staffManagementPage');
-                    document.getElementById('currentStaffLocationSpan').textContent = getLocationName();
-                    displayStaffList();
-                } else {
-                    showPage('clientManagementPage');
-                    document.getElementById('currentLocationSpan').textContent = getLocationName();
-                    displayClientList();
-                }
-                saveSessionState();
-            } else {
-                showStaffError('Invalid staff password.');
-            }
-        }
-
-        function showStaffError(message) {
-            const errorDiv = document.getElementById('staffLoginError');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-
-        function hideStaffError() {
-            document.getElementById('staffLoginError').style.display = 'none';
-        }
-
-        function displayClientList() {
-            const clientListDiv = document.getElementById('clientList');
-            const currentLocation = getLocationName();
-            
-            // Ensure client profiles are loaded before displaying
-            if (clientProfiles.length === 0) {
-                loadClientProfiles().then(() => {
-                    displayClientListInternal();
-                });
-            } else {
-                displayClientListInternal();
-            }
-        }
-
-        function displayClientListInternal() {
-            const clientListDiv = document.getElementById('clientList');
-            const currentLocation = getLocationName();
-            const locationClients = clientProfiles.filter(client => client.location === currentLocation);
-
-            if (locationClients.length === 0) {
-                clientListDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No clients registered for this location yet.</div>';
-                return;
-            }
-
-            // Sort clients alphabetically by first name
-            locationClients.sort((a, b) => a.first_name.localeCompare(b.first_name));
-
-            let html = '';
-            locationClients.forEach(client => {
-                html += `
-                    <div class="client-card">
-                        <img class="client-card-photo" src="${client.photo_url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'28\' fill=\'%23f8f9fa\' stroke=\'%23e0e0e0\' stroke-width=\'2\'/%3E%3Ctext x=\'30\' y=\'38\' text-anchor=\'middle\' font-size=\'18\' fill=\'%23666\'%3E👤%3C/text%3E%3C/svg%3E'}" alt="${client.first_name} ${client.last_name}">
-                        <div class="client-card-info">
-                            <div class="client-card-name">${client.first_name} ${client.last_name}</div>
-                            <div class="client-card-location">${client.location}</div>
-                        </div>
-                        <div class="client-card-actions">
-                            <button class="btn btn-primary btn-small" onclick="editClient(${client.id})">✏️ Edit</button>
-                            <button class="btn btn-warning btn-small" onclick="deleteClient(${client.id})">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            clientListDiv.innerHTML = html;
-        }
-
-        function showAddClientForm() {
-            editingClientId = null;
-            document.getElementById('clientFormTitle').textContent = 'Add New Client';
-            document.getElementById('clientFirstName').value = '';
-            document.getElementById('clientLastName').value = '';
-            document.getElementById('clientLocation').value = getLocationName();
-            resetPhotoPreview();
-            showPage('addClientPage');
-            saveSessionState();
-        }
-
-        function editClient(clientId) {
-            const client = clientProfiles.find(c => c.id === clientId);
-            if (!client) return;
-
-            editingClientId = clientId;
-            document.getElementById('clientFormTitle').textContent = 'Edit Client';
-            document.getElementById('clientFirstName').value = client.first_name;
-            document.getElementById('clientLastName').value = client.last_name;
-            document.getElementById('clientLocation').value = client.location;
-            
-            if (client.photo_url) {
-                document.getElementById('photoPreview').src = client.photo_url;
-            } else {
-                resetPhotoPreview();
-            }
-            
-            showPage('addClientPage');
-            saveSessionState();
-        }
-
-        function deleteClient(clientId) {
-            const client = clientProfiles.find(c => c.id === clientId);
-            if (!client) return;
-
-            if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
-                // Remove from local array IMMEDIATELY
-                clientProfiles = clientProfiles.filter(c => c.id !== clientId);
-                displayClientList();
-                
-                // Delete from Supabase in background
-                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        console.log('✅ Client deleted from Supabase');
-                    } else {
-                        console.log('⚠️ Supabase delete failed, but local delete successful');
-                    }
-                })
-                .catch(error => {
-                    console.error('⚠️ Background delete failed:', error);
-                    // Local delete already happened, so this doesn't affect user experience
-                });
-            }
-        }
-
-        function previewPhoto(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('photoPreview').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function resetPhotoPreview() {
-            document.getElementById('photoPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='38' fill='%23f8f9fa' stroke='%23e0e0e0' stroke-width='2'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='24' fill='%23666'%3E👤%3C/text%3E%3C/svg%3E";
-        }
-
-        function saveClientProfile() {
-            const firstName = document.getElementById('clientFirstName').value.trim();
-            const lastName = document.getElementById('clientLastName').value.trim();
-            const location = document.getElementById('clientLocation').value;
-            const photoFile = document.getElementById('clientPhoto').files[0];
-
-            if (!firstName || !lastName || !location) {
-                alert('Please fill in all required fields.');
-                return;
-            }
-
-            const saveToDatabase = (photoUrl = null) => {
-                const clientData = {
-                    first_name: firstName,
-                    last_name: lastName,
-                    location: location,
-                    photo_url: photoUrl
-                };
-
-                if (editingClientId) {
-                    // Update existing client in local array IMMEDIATELY
-                    const index = clientProfiles.findIndex(c => c.id === editingClientId);
-                    if (index !== -1) {
-                        clientProfiles[index] = { ...clientProfiles[index], ...clientData };
-                    }
-                    
-                    // Show success and move to next screen INSTANTLY (no popup)
-                    showPage('clientManagementPage');
-                    displayClientList();
-                    saveSessionState();
-                    
-                    // Upload to Supabase in the background (async)
-                    updateClientInSupabase(editingClientId, clientData);
-                } else {
-                    // Create temporary client object with fake ID for immediate display
-                    const tempClient = {
-                        id: Date.now(), // Temporary ID
-                        ...clientData,
-                        isTemporary: true
-                    };
-                    
-                    // Add to local array IMMEDIATELY
-                    clientProfiles.push(tempClient);
-                    
-                    // Show success and move to next screen INSTANTLY (no popup)
-                    showPage('clientManagementPage');
-                    displayClientList();
-                    saveSessionState();
-                    
-                    // Upload to Supabase in the background and update with real ID
-                    createClientInSupabase(clientData, tempClient);
-                }
-            };
-
-            // For simplicity, we'll use data URLs for photos instead of file upload
-            if (photoFile) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    saveToDatabase(e.target.result);
-                };
-                reader.readAsDataURL(photoFile);
-            } else if (editingClientId) {
-                // Keep existing photo for edits
-                const existingClient = clientProfiles.find(c => c.id === editingClientId);
-                saveToDatabase(existingClient ? existingClient.photo_url : null);
-            } else {
-                saveToDatabase();
-            }
-        }
-
-        // Background Supabase operations
-        function createClientInSupabase(clientData, tempClient) {
-            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles`, {
-                method: 'POST',
-                headers: {
-                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(clientData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('✅ Client uploaded to Supabase:', data);
-                // Update the temporary client with real Supabase ID
-                const tempIndex = clientProfiles.findIndex(c => c.id === tempClient.id);
-                if (tempIndex !== -1 && data[0]) {
-                    clientProfiles[tempIndex] = { ...data[0], isTemporary: false };
-                }
-            })
-            .catch(error => {
-                console.error('⚠️ Background Supabase upload failed:', error);
-                // Keep the temporary client in the array - still works locally
-            });
-        }
-
-        function updateClientInSupabase(clientId, clientData) {
-            fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?id=eq.${clientId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(clientData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('✅ Client updated in Supabase:', data);
-            })
-            .catch(error => {
-                console.error('⚠️ Background Supabase update failed:', error);
-                // Local data is already updated, so this doesn't affect user experience
-            });
-        }
-
-        function cancelAddClient() {
-            showPage('clientManagementPage');
-            saveSessionState();
-        }
-
-        // Get list of people who arrived today and haven't departed yet
+        // Name suggestion functions for departures
         function getCurrentArrivals() {
             const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
             const today = new Date().toLocaleDateString();
@@ -1870,12 +2957,11 @@
             return existingData.filter(person => 
                 person.arrivalDate === today && 
                 person.status === 'arrived' && 
-                person.location === currentLocation &&
+                (!!person.location && person.location.trim().toLowerCase() === currentLocation.trim().toLowerCase()) &&
                 person.userType === currentUserType
             );
         }
 
-        // Show name suggestions as user types
         function showNameSuggestions() {
             const input = document.getElementById('leaveFirst');
             const suggestionsDiv = document.getElementById('nameSuggestions');
@@ -1919,14 +3005,12 @@
             suggestionsDiv.style.width = input.offsetWidth + 'px';
         }
 
-        // Select a suggestion
         function selectSuggestion(firstName, surname) {
             document.getElementById('leaveFirst').value = firstName;
             document.getElementById('leaveLast').value = surname;
             hideNameSuggestions();
         }
 
-        // Hide suggestions
         function hideNameSuggestions() {
             setTimeout(() => {
                 const suggestionsDiv = document.getElementById('nameSuggestions');
@@ -1968,7 +3052,6 @@
             }
         }
 
-        // Highlight selected suggestion
         function highlightSuggestion(suggestions) {
             suggestions.forEach((item, index) => {
                 if (index === selectedSuggestionIndex) {
@@ -1980,794 +3063,15 @@
                 }
             });
         }
-
-        function doRecordArrival() {
-            let firstName, surname;
-            
-            if (APP.currentUserType === 'client') {
-                const currentLocation = getLocationName();
-                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
-                    const selectedClientId = document.getElementById('selectedClientId').value;
-                    if (!selectedClientId) {
-                        alert('Please select a client from the dropdown.');
-                        return;
-                    }
-                    
-                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
-                    if (!selectedClient) {
-                        alert('Selected client not found. Please try again.');
-                        return;
-                    }
-                    
-                    firstName = selectedClient.first_name;
-                    surname = selectedClient.last_name;
-                } else {
-                    firstName = document.getElementById('firstName').value.trim();
-                    surname = document.getElementById('surname').value.trim();
-                    
-                    if (!firstName || !surname) {
-                        alert('Please enter both first name and surname.');
-                        return;
-                    }
-                }
-            } else if (APP.currentUserType === 'staff') {
-                const currentLocation = getLocationName();
-                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
-                    const selectedStaffId = document.getElementById('selectedStaffId').value;
-                    if (!selectedStaffId) {
-                        alert('Please select a staff member from the dropdown.');
-                        return;
-                    }
-                    
-                    const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
-                    if (!selectedStaff) {
-                        alert('Selected staff member not found. Please try again.');
-                        return;
-                    }
-                    
-                    firstName = selectedStaff.first_name;
-                    surname = selectedStaff.last_name;
-                } else {
-                    firstName = document.getElementById('firstName').value.trim();
-                    surname = document.getElementById('surname').value.trim();
-                    
-                    if (!firstName || !surname) {
-                        alert('Please enter both first name and surname.');
-                        return;
-                    }
-                }
-            } else {
-                // For visitors - always use text input
-                firstName = document.getElementById('firstName').value.trim();
-                surname = document.getElementById('surname').value.trim();
-                
-                if (!firstName || !surname) {
-                    alert('Please enter both first name and surname.');
-                    return;
-                }
-            }
-
-            const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
-            const mobile = document.getElementById('mobile') ? document.getElementById('mobile').value.trim() : '';
-
-            const data = {
-                firstName: firstName,
-                surname: surname,
-                email: email || 'Not provided',
-                mobile: mobile || 'Not provided',
-                userType: APP.currentUserType,
-                location: getLocationName(),
-                arrivalDate: new Date().toLocaleDateString(),
-                arrivalTime: new Date().toLocaleTimeString(),
-                status: 'arrived',
-                timestamp: new Date().toISOString()
-            };
-
-            saveToStorage(data);
-            showSuccess(`🎉 Welcome, ${firstName} ${surname}!`, `Your arrival has been recorded as a ${APP.currentUserType}.`);
-        }
-
-        function doRecordDeparture() {
-            let firstName, surname;
-            
-            // Check if this is a client departure with dropdown selection
-            if (APP.currentUserType === 'client') {
-                const currentLocation = getLocationName();
-                if (currentLocation === 'The Royal' || currentLocation === 'The Crown' || currentLocation === 'Seabreeze') {
-                    const selectedClientId = document.getElementById('selectedDepartureClientId').value;
-                    if (!selectedClientId) {
-                        alert('Please select a client from the dropdown.');
-                        return;
-                    }
-                    
-                    const selectedClient = clientProfiles.find(c => c.id == selectedClientId);
-                    if (!selectedClient) {
-                        alert('Selected client not found. Please try again.');
-                        return;
-                    }
-                    
-                    firstName = selectedClient.first_name;
-                    surname = selectedClient.last_name;
-                } else {
-                    // For other locations, use text input
-                    firstName = document.getElementById('leaveFirst').value.trim();
-                    surname = document.getElementById('leaveLast').value.trim();
-                    
-                    if (!firstName || !surname) {
-                        alert('Please enter both first name and surname.');
-                        return;
-                    }
-                }
-            } else if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
-                const selectedStaffId = document.getElementById('selectedDepartureStaffId').value;
-                if (!selectedStaffId) {
-                    alert('Please select a staff member from the dropdown.');
-                    return;
-                }
-                
-                const selectedStaff = staffProfiles.find(s => s.id == selectedStaffId);
-                if (!selectedStaff) {
-                    alert('Selected staff member not found. Please try again.');
-                    return;
-                }
-                
-                firstName = selectedStaff.first_name;
-                surname = selectedStaff.last_name;
-            } else {
-                // For visitors and staff at other locations, use text input
-                firstName = document.getElementById('leaveFirst').value.trim();
-                surname = document.getElementById('leaveLast').value.trim();
-                
-                if (!firstName || !surname) {
-                    alert('Please enter both first name and surname.');
-                    return;
-                }
-            }
-
-            currentDepartingVisitor = {
-                firstName: firstName,
-                surname: surname,
-                email: 'Not provided',
-                mobile: 'Not provided',
-                userType: APP.currentUserType,
-                location: getLocationName(),
-                departureDate: new Date().toLocaleDateString(),
-                departureTime: new Date().toLocaleTimeString(),
-                status: 'departed',
-                timestamp: new Date().toISOString()
-            };
-
-            if (APP.currentUserType === 'visitor') {
-                showPage('feedbackPage');
-                setupStarRatings();
-                saveSessionState(); // Save state when on feedback page
-            } else if (APP.currentUserType === 'staff') {
-                saveToStorage(currentDepartingVisitor);
-                showSuccess(`😊 Thank you for today ${firstName} ${surname}. You are the reason someone smiled today!`, 'Your departure has been recorded.');
-            } else if (APP.currentUserType === 'client') {
-                saveToStorage(currentDepartingVisitor);
-                showSuccess(`☀️ We hope you had the best day ${firstName} ${surname}, see you soon!`, 'Your departure has been recorded.');
-            }
-        }
-
-        function setupStarRatings() {
-            const starRatings = document.querySelectorAll('.star-rating');
-            
-            // First, reset all star ratings to fresh state
-            starRatings.forEach(rating => {
-                rating.dataset.selectedRating = '0'; // Reset to no rating
-                const stars = rating.querySelectorAll('.star');
-                stars.forEach(star => {
-                    star.classList.remove('selected');
-                    star.style.opacity = '0.3';
-                    star.style.transform = 'scale(1)';
-                });
-            });
-            
-            starRatings.forEach(rating => {
-                const stars = rating.querySelectorAll('.star');
-                
-                stars.forEach((star, index) => {
-                    star.addEventListener('click', function() {
-                        const selectedRating = parseInt(this.dataset.rating);
-                        
-                        // Clear all stars first
-                        stars.forEach(s => s.classList.remove('selected'));
-                        
-                        // Light up all stars from 1 to the selected rating
-                        for (let i = 0; i < selectedRating; i++) {
-                            stars[i].classList.add('selected');
-                        }
-                        
-                        // Store the rating
-                        rating.dataset.selectedRating = selectedRating;
-                        
-                        console.log(`Rated ${rating.dataset.question}: ${selectedRating} stars`);
-                    });
-                    
-                    // Hover effect - show preview of what would be selected
-                    star.addEventListener('mouseenter', function() {
-                        const hoverRating = parseInt(this.dataset.rating);
-                        stars.forEach((s, i) => {
-                            if (i < hoverRating) {
-                                s.style.opacity = '0.8';
-                                s.style.transform = 'scale(1.05)';
-                            } else {
-                                s.style.opacity = '0.3';
-                                s.style.transform = 'scale(1)';
-                            }
-                        });
-                    });
-                    
-                    // Reset hover effect
-                    star.addEventListener('mouseleave', function() {
-                        const selectedRating = rating.dataset.selectedRating || 0;
-                        stars.forEach((s, i) => {
-                            if (i < selectedRating) {
-                                s.style.opacity = '1';
-                                s.style.transform = 'scale(1)';
-                                s.classList.add('selected');
-                            } else {
-                                s.style.opacity = '0.3';
-                                s.style.transform = 'scale(1)';
-                                s.classList.remove('selected');
-                            }
-                        });
-                    });
-                });
-            });
-        }
-
-        function doSubmitFeedback() {
-            const ratings = {};
-            const starRatings = document.querySelectorAll('.star-rating');
-            
-            starRatings.forEach(rating => {
-                const questionName = rating.dataset.question;
-                const selectedRating = rating.dataset.selectedRating || 0;
-                ratings[questionName] = parseInt(selectedRating);
-            });
-            
-            const additionalFeedback = document.getElementById('additionalFeedback').value.trim();
-            
-            currentDepartingVisitor.feedback = {
-                overall: ratings.overall || 0,
-                safety: ratings.safety || 0,
-                responsive: ratings.responsive || 0,
-                caring: ratings.caring || 0,
-                leadership: ratings.leadership || 0,
-                effectiveness: ratings.effectiveness || 0,
-                additionalComments: additionalFeedback || 'No additional comments'
-            };
-            
-            saveToStorage(currentDepartingVisitor);
-            showSuccess(`💝 Thank you for visiting ${currentDepartingVisitor.firstName} ${currentDepartingVisitor.surname}, we value your feedback about our home.`, 'Your departure and feedback have been recorded.');
-        }
-
-        function doSkipFeedback() {
-            saveToStorage(currentDepartingVisitor);
-            showSuccess(`👋 Goodbye, ${currentDepartingVisitor.firstName} ${currentDepartingVisitor.surname}!`, 'Your departure has been recorded.');
-        }
-
-        function saveToStorage(data) {
-            try {
-                // Get existing data
-                const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
-                
-                // Check if this is a departure - try to find matching arrival record
-                if (data.status === 'departed') {
-                    const matchingIndex = findMatchingArrival(existingData, data);
-                    
-                    if (matchingIndex !== -1) {
-                        console.log('Found matching arrival record, updating existing entry');
-                        // Update the existing record with departure info
-                        const existingRecord = existingData[matchingIndex];
-                        
-                        // Keep the original arrival data and add departure data
-                        existingData[matchingIndex] = {
-                            ...existingRecord, // Keep all original data (email, mobile, arrival times)
-                            // Update with departure information
-                            departureDate: data.departureDate,
-                            departureTime: data.departureTime,
-                            status: 'departed',
-                            timestamp: data.timestamp, // Update timestamp to departure time
-                            // Add feedback if it exists (only visitors provide feedback)
-                            ...(data.feedback ? { feedback: data.feedback } : {})
-                        };
-                        
-                        console.log('Updated existing record:', existingData[matchingIndex]);
-                    } else {
-                        console.log('No matching arrival found, creating new departure record');
-                        // No matching arrival found, create new record
-                        existingData.unshift(data);
-                    }
-                } else {
-                    console.log('New arrival record');
-                    // This is an arrival, just add it normally
-                    existingData.unshift(data);
-                }
-                
-                // Save back to localStorage
-                localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
-                
-                // Prepare data for Supabase
-                const latestRecord = data.status === 'departed' && findMatchingArrival(JSON.parse(localStorage.getItem('hellohubVisitors')), data) !== -1 
-                    ? JSON.parse(localStorage.getItem('hellohubVisitors'))[findMatchingArrival(JSON.parse(localStorage.getItem('hellohubVisitors')), data)]
-                    : data;
-                
-                const supabaseData = {
-                    first_name: latestRecord.firstName,
-                    surname: latestRecord.surname,
-                    email: latestRecord.email || 'Not provided',
-                    mobile: latestRecord.mobile || 'Not provided',
-                    user_type: latestRecord.userType,
-                    location: latestRecord.location,
-                    status: latestRecord.status
-                };
-
-                // Only add arrival data if it exists
-                if (latestRecord.arrivalDate) {
-                    supabaseData.arrival_date = latestRecord.arrivalDate;
-                }
-                if (latestRecord.arrivalTime) {
-                    supabaseData.arrival_time = latestRecord.arrivalTime;
-                }
-
-                // Only add departure data if it exists  
-                if (latestRecord.departureDate) {
-                    supabaseData.departure_date = latestRecord.departureDate;
-                }
-                if (latestRecord.departureTime) {
-                    supabaseData.departure_time = latestRecord.departureTime;
-                }
-
-                // Only add feedback if it exists
-                if (latestRecord.feedback) {
-                    supabaseData.feedback_overall = latestRecord.feedback.overall;
-                    supabaseData.feedback_safety = latestRecord.feedback.safety;
-                    supabaseData.feedback_responsive = latestRecord.feedback.responsive;
-                    supabaseData.feedback_caring = latestRecord.feedback.caring;
-                    supabaseData.feedback_leadership = latestRecord.feedback.leadership;
-                    supabaseData.feedback_effectiveness = latestRecord.feedback.effectiveness;
-                    
-                    // Calculate average rating manually
-                    const ratings = [
-                        latestRecord.feedback.overall,
-                        latestRecord.feedback.safety,
-                        latestRecord.feedback.responsive,
-                        latestRecord.feedback.caring,
-                        latestRecord.feedback.leadership,
-                        latestRecord.feedback.effectiveness
-                    ].filter(rating => rating > 0);
-                    
-                    const avgRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
-                    
-                    supabaseData.feedback_average = avgRating;
-                    supabaseData.feedback_comments = latestRecord.feedback.additionalComments || 'No additional comments';
-                }
-                
-                console.log('Sending to Supabase:', JSON.stringify(supabaseData, null, 2));
-                
-                // For updates, we'd need to implement PUT/PATCH to Supabase
-                // For now, we'll still POST each record separately
-                fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/visitors`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(supabaseData)
-                })
-                .then(response => {
-                    console.log('Supabase response status:', response.status);
-                    if (response.ok) {
-                        return response.json().then(result => {
-                            console.log('✅ Data synced to Supabase successfully:', result);
-                        });
-                    } else {
-                        return response.text().then(text => {
-                            console.log('⚠️ Supabase sync failed:', response.status, text);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('⚠️ Supabase sync failed:', error);
-                    // Data is still saved locally, so continue normally
-                });
-                
-                console.log('Data saved successfully to localStorage');
-                return true;
-            } catch (error) {
-                console.log('Save failed:', error);
-                return false;
-            }
-        }
-
-        // Helper function to find matching arrival record for departure
-        function findMatchingArrival(existingData, departureData) {
-            // Look for a matching person who has arrived but not yet departed
-            // Match based on name, user type, and location on the same day
-            const departureDate = departureData.departureDate;
-            
-            for (let i = 0; i < existingData.length; i++) {
-                const record = existingData[i];
-                
-                // Check if names match (case insensitive, flexible matching)
-                const firstNameMatch = record.firstName.toLowerCase().trim() === departureData.firstName.toLowerCase().trim();
-                const surnameMatch = record.surname.toLowerCase().trim() === departureData.surname.toLowerCase().trim();
-                
-                // Check other criteria
-                const userTypeMatch = record.userType === departureData.userType;
-                const locationMatch = record.location === departureData.location;
-                const statusMatch = record.status === 'arrived'; // Only match with arrivals
-                const sameDayMatch = record.arrivalDate === departureDate; // Same day
-                
-                if (firstNameMatch && surnameMatch && userTypeMatch && locationMatch && statusMatch && sameDayMatch) {
-                    console.log('Found matching arrival:', record);
-                    return i;
-                }
-            }
-            
-            console.log('No matching arrival found for:', departureData.firstName, departureData.surname);
-            return -1; // No match found
-        }
-
-        function showSuccess(personalMessage, systemMessage) {
-            document.getElementById('successMsg').textContent = personalMessage;
-            document.getElementById('successDetails').textContent = systemMessage;
-            showPage('successPage');
-            saveSessionState(); // Save state when showing success page
-            startCountdown();
-        }
-
-        function startCountdown() {
-            let seconds = 5;
-            const countdownEl = document.getElementById('countdown');
-            
-            const updateCountdown = () => {
-                countdownEl.textContent = `Returning in ${seconds} seconds...`;
-                seconds--;
-                
-                if (seconds < 0) {
-                    APP.currentUserType = '';
-                    document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-                    showPage('userTypeSelect');
-                    saveSessionState(); // Save state when countdown completes
-                } else {
-                    setTimeout(updateCountdown, 1000);
-                }
-            };
-            
-            updateCountdown();
-        }
-
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-        }
-
-        function doGoBack() {
-            // Determine where to go back to based on current context
-            const activePage = document.querySelector('.page.active').id;
-            
-            if (activePage === 'staffAuthPage' || activePage === 'clientManagementPage' || activePage === 'addClientPage') {
-                if (activePage === 'addClientPage') {
-                    showPage('clientManagementPage');
-                } else if (activePage === 'clientManagementPage') {
-                    showPage('arrivingPage');
-                    buildArrivalForm(); // Rebuild the form to show the client dropdown again
-                } else {
-                    showPage('arrivingPage');
-                    buildArrivalForm();
-                }
-            } else if (activePage === 'staffManagementPage' || activePage === 'addStaffPage') {
-                if (activePage === 'addStaffPage') {
-                    showPage('staffManagementPage');
-                } else if (activePage === 'staffManagementPage') {
-                    showPage('arrivingPage');
-                    buildArrivalForm(); // Rebuild the form to show the staff dropdown again
-                } else {
-                    showPage('arrivingPage');
-                    buildArrivalForm();
-                }
-            } else {
-                showPage('userTypeSelect');
-            }
-            saveSessionState(); // Save state when going back
-        }
-
-        function finishClientManagement() {
+        function finishClientManagement() { 
             showPage('arrivingPage');
-            buildArrivalForm(); // Rebuild the form to show the client dropdown
+            buildArrivalForm();
             saveSessionState();
         }
-
-        function finishStaffManagement() {
+        function finishStaffManagement() { 
             showPage('arrivingPage');
-            buildArrivalForm(); // Rebuild the form to show the staff dropdown
+            buildArrivalForm();
             saveSessionState();
-        }
-
-        function adminReset() {
-            // Only allow admin reset if user is logged in
-            if (!APP.company || APP.company === '') {
-                return; // Do nothing if not logged in
-            }
-            
-            APP.adminClicks++;
-            setTimeout(() => { APP.adminClicks = 0; }, 2000);
-            if (APP.adminClicks >= 3) {
-                // Clear location data
-                APP.currentBusiness = '';
-                APP.currentUserType = '';
-                document.getElementById('businessDropdown').value = '';
-                document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-                
-                // Remove location backgrounds and reset location display
-                document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
-                document.getElementById('locationName').style.display = 'none';
-                document.getElementById('locationName').textContent = '';
-                
-                // Update header to show company but no location
-                updateHeader();
-                
-                // Update session
-                saveSessionState();
-                
-                showPage('businessSelect');
-            }
-        }
-
-        // Logout timer functionality
-        let logoutTimer = null;
-        let logoutProgress = 0;
-
-        function startLogoutTimer() {
-            const logo = document.getElementById('headerLogo');
-            if (!logo || logo.style.display === 'none') return;
-            
-            logoutProgress = 0;
-            
-            logoutTimer = setInterval(() => {
-                logoutProgress += 100; // 100ms intervals
-                
-                // Visual feedback - darken the logo progressively
-                const opacity = 1 - (logoutProgress / 6000) * 0.7; // Darken to 30% opacity
-                logo.style.opacity = opacity;
-                
-                if (logoutProgress >= 6000) { // 6 seconds
-                    performLogout();
-                    cancelLogoutTimer();
-                }
-            }, 100);
-        }
-
-        function cancelLogoutTimer() {
-            if (logoutTimer) {
-                clearInterval(logoutTimer);
-                logoutTimer = null;
-                
-                // Reset logo appearance
-                const logo = document.getElementById('headerLogo');
-                if (logo) {
-                    logo.style.opacity = 1;
-                }
-            }
-        }
-
-        function performLogout() {
-            // Reset all APP data
-            APP.currentBusiness = '';
-            APP.currentUserType = '';
-            APP.company = '';
-            APP.locations = [];
-            
-            // Reset UI elements
-            document.getElementById('businessDropdown').value = '';
-            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('headerTitle').textContent = '👋 HelloHub';
-            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
-            
-            // Remove all background classes and hide logo
-            document.body.classList.remove('alex-davis-logged-in');
-            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
-            document.getElementById('headerLogo').style.display = 'none';
-            document.getElementById('headerLogo').style.opacity = 1;
-            
-            // Clear session data
-            localStorage.removeItem('hellohubSession');
-            
-            // Go back to login page
-            showPage('loginPage');
-        }
-
-        // Initialize when page loads
-        console.log('Script loaded successfully');
-        console.log('Login: office@alexdavis.co.uk / office927');
-        
-        // Add Enter key support
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('emailAddress').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') doLogin();
-            });
-            document.getElementById('password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') doLogin();
-            });
-            
-            // Add click outside to close client dropdown
-            document.addEventListener('click', function(e) {
-                // Close arrival dropdown
-                const dropdown = document.getElementById('clientOptions');
-                const select = document.getElementById('clientSelect');
-                if (dropdown && select && !select.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-                
-                // Close departure dropdown
-                const departureDropdown = document.getElementById('departureClientOptions');
-                const departureSelect = document.getElementById('departureClientSelect');
-                if (departureDropdown && departureSelect && !departureSelect.contains(e.target) && !departureDropdown.contains(e.target)) {
-                    departureDropdown.style.display = 'none';
-                }
-            });
-            
-            // Restore session state from localStorage
-            restoreSessionState();
-        });
-
-        // Save current state to localStorage
-        function saveSessionState() {
-            const sessionState = {
-                company: APP.company,
-                locations: APP.locations,
-                currentBusiness: APP.currentBusiness,
-                currentUserType: APP.currentUserType,
-                isLoggedIn: APP.company !== '',
-                currentPage: getCurrentActivePage(),
-                // Save departing visitor data for feedback page restoration
-                currentDepartingVisitor: currentDepartingVisitor
-            };
-            localStorage.setItem('hellohubSession', JSON.stringify(sessionState));
-        }
-
-        // Get current active page
-        function getCurrentActivePage() {
-            const activePages = document.querySelectorAll('.page.active');
-            if (activePages.length > 0) {
-                return activePages[0].id;
-            }
-            return 'loginPage';
-        }
-
-        // Restore session state from localStorage
-        function restoreSessionState() {
-            const savedSession = localStorage.getItem('hellohubSession');
-            
-            // Check if this is a fresh browser session (new tab/window)
-            const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
-            
-            // Mark this browser tab as active
-            sessionStorage.setItem('hellohubActive', 'true');
-            
-            if (savedSession) {
-                try {
-                    const sessionState = JSON.parse(savedSession);
-                    
-                    // Check if we have a complete, valid session
-                    const hasCompleteSession = sessionState.isLoggedIn && 
-                                              sessionState.company && 
-                                              sessionState.locations && 
-                                              sessionState.locations.length > 0;
-                    
-                    if (hasCompleteSession) {
-                        console.log('Valid session found. New browser session:', isNewBrowserSession);
-                        
-                        if (isNewBrowserSession) {
-                            // Fresh URL entry: Start at login page
-                            console.log('Fresh URL entry detected, starting at login page');
-                            localStorage.removeItem('hellohubSession');
-                            resetToLoginPage();
-                        } else {
-                            // Browser refresh: Restore full state
-                            console.log('Browser refresh detected, restoring full state');
-                            
-                            // Always restore the login and location data
-                            APP.company = sessionState.company;
-                            APP.locations = sessionState.locations;
-                            APP.currentBusiness = sessionState.currentBusiness || '';
-                            APP.currentUserType = sessionState.currentUserType || '';
-                            
-                            // Restore departing visitor data if it exists
-                            if (sessionState.currentDepartingVisitor) {
-                                currentDepartingVisitor = sessionState.currentDepartingVisitor;
-                            }
-                            
-                            // Setup UI
-                            setupBusinessDropdown();
-                            if (APP.currentBusiness) {
-                                document.getElementById('businessDropdown').value = APP.currentBusiness;
-                                updateHeader();
-                                loadClientProfiles(); // Load client profiles when restoring session
-                            }
-                            
-                            // Restore user type selection if it exists
-                            if (APP.currentUserType) {
-                                document.querySelectorAll('.user-type-btn').forEach(btn => {
-                                    btn.classList.remove('active');
-                                    if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
-                                        btn.classList.add('active');
-                                    }
-                                });
-                            }
-                            
-                            // Restore exact page they were on - with proper form rebuilding
-                            if (sessionState.currentPage && sessionState.currentPage !== 'loginPage') {
-                                showPageWithoutSaving(sessionState.currentPage);
-                                
-                                // Rebuild forms if necessary
-                                if (sessionState.currentPage === 'arrivingPage') {
-                                    buildArrivalForm();
-                                } else if (sessionState.currentPage === 'leavingPage') {
-                                    buildDepartureForm();
-                                } else if (sessionState.currentPage === 'feedbackPage') {
-                                    setupStarRatings();
-                                } else if (sessionState.currentPage === 'clientManagementPage') {
-                                    document.getElementById('currentLocationSpan').textContent = getLocationName();
-                                    displayClientList();
-                                } else if (sessionState.currentPage === 'successPage') {
-                                    // If on success page, redirect to user type selection instead
-                                    // Success page is temporary and shouldn't be restored
-                                    showPageWithoutSaving('userTypeSelect');
-                                }
-                            } else {
-                                // Only use fallback logic if no currentPage was saved
-                                if (APP.currentBusiness) {
-                                    showPageWithoutSaving('userTypeSelect');
-                                } else {
-                                    showPageWithoutSaving('businessSelect');
-                                }
-                            }
-                        }
-                    } else {
-                        console.log('Invalid or incomplete session, starting fresh');
-                        localStorage.removeItem('hellohubSession');
-                        resetToLoginPage();
-                    }
-                } catch (error) {
-                    console.log('Error parsing session, starting fresh');
-                    localStorage.removeItem('hellohubSession');
-                    resetToLoginPage();
-                }
-            } else {
-                console.log('No saved session, starting at login page');
-                resetToLoginPage();
-            }
-        }
-
-        // Reset everything to login page state
-        function resetToLoginPage() {
-            APP.company = '';
-            APP.locations = [];
-            APP.currentBusiness = '';
-            APP.currentUserType = '';
-            
-            document.getElementById('headerTitle').textContent = '👋 HelloHub';
-            document.getElementById('headerSubtitle').textContent = 'Visitor, Client & Staff Management';
-            document.getElementById('locationName').style.display = 'none';
-            document.getElementById('headerLogo').style.display = 'none';
-            
-            document.body.classList.remove('alex-davis-logged-in');
-            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
-            
-            showPageWithoutSaving('loginPage');
-        }
-
-        // Helper function to show page without saving state (to avoid recursion during restore)
-        function showPageWithoutSaving(pageId) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
         }
     </script>
 </body>
