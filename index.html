@@ -358,42 +358,21 @@
                     <text x="250" y="110" font-family="Arial" font-size="32" font-weight="bold" fill="#000000">HelloHub</text>
                 </svg>
             </div>
-<script>
-            function doLogin(event) {
-  if (event) event.preventDefault();
-
-  console.log('Login function called');
-  const email = document.getElementById('emailAddress').value.trim().toLowerCase();
-  const password = document.getElementById('password').value.trim();
-
-  if (!email || !password) {
-    showError('Please enter both email and password.');
-    return;
-  }
-
-  if (email === 'office@alexdavis.co.uk' && password === 'office927') {
-    console.log('Login successful!');
-    APP.company = 'Alex Davis Care Group';
-    APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
-
-    const loginData = {
-      isAuthenticated: true,
-      company: APP.company,
-      locations: APP.locations,
-      loginTime: Date.now(),
-      expiresIn: 7 * 24 * 60 * 60 * 1000
-    };
-    localStorage.setItem('hellohubAuth', JSON.stringify(loginData));
-
-    document.getElementById('emailAddress').value = '';
-    document.getElementById('password').value = '';
-    hideError();
-    // Redirect or show next page here
-  } else {
-    showError('Invalid login.');
-  }
-}
-<script/>
+<div id="loginPage" class="page active">
+  <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Company Login</h2>
+  <form onsubmit="doLogin(event)">
+    <div class="form-group">
+      <label for="emailAddress">Email Address:</label>
+      <input type="email" id="emailAddress" placeholder="Enter your company email" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" type="submit">🔐 Login</button>
+  </form>
+  <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+</div>
             <div id="businessSelect" class="page">
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Select Location</h2>
                 <div class="form-group">
