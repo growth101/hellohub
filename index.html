@@ -703,7 +703,8 @@
         };
 
         // LOGIN FUNCTION - MOVED TO TOP LEVEL
-        function doLogin() {
+        function doLogin(event) {
+    event.preventDefault();
             console.log('Login function called');
             const email = document.getElementById('emailAddress').value.trim().toLowerCase();
             const password = document.getElementById('password').value.trim();
