@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +97,27 @@
         input, select {
             width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
             font-size: 16px; background: #f8f9fa; transition: all 0.3s ease;
+            /* Fix iOS Safari styling issues */
+            -webkit-appearance: none;
+            -webkit-border-radius: 12px;
+            /* Prevent zoom on focus for mobile devices */
+            font-size: 16px;
+            /* Improve touch handling */
+            touch-action: manipulation;
+        }
+        
+        /* Business dropdown specific styling with down arrow */
+        #businessDropdown {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.5 0L6 4.5L10.5 0L12 1.5L6 7.5L0 1.5L1.5 0Z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 12px 8px;
+            padding-right: 45px;
+            cursor: pointer;
+        }
+        
+        #businessDropdown:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2374b9ff' d='M1.5 0L6 4.5L10.5 0L12 1.5L6 7.5L0 1.5L1.5 0Z'/%3E%3C/svg%3E");
         }
         input:focus, select:focus {
             outline: none; border-color: #74b9ff; background: white; box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.1);
@@ -103,6 +125,11 @@
         .btn {
             width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold;
             cursor: pointer; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            /* Improve touch handling for mobile devices */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .btn-primary { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
         .btn-success { background: linear-gradient(135deg, #00b894, #00a085); color: white; }
@@ -696,21 +723,119 @@
             cacheTimeout: 5 * 60 * 1000 // 5 minutes cache
         };
 
+        // Enhanced error handling
+        function handleApiError(error, operation = 'API operation') {
+            console.error(`❌ ${operation} failed:`, error);
+            
+            // Check if it's a network error
+            if (!navigator.onLine) {
+                showUserFriendlyError('No internet connection. Please check your network and try again.');
+                return;
+            }
+            
+            // Check if it's a server error
+            if (error.message && error.message.includes('HTTP 5')) {
+                showUserFriendlyError('Server is temporarily unavailable. Please try again in a few moments.');
+                return;
+            }
+            
+            // Generic error
+            showUserFriendlyError('Something went wrong. Please try again or contact support if the problem persists.');
+        }
+
+        function showUserFriendlyError(message) {
+            // Create or update error notification
+            let errorDiv = document.getElementById('globalError');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'globalError';
+                errorDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #ff5252;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 10000;
+                    max-width: 400px;
+                    text-align: center;
+                    font-weight: bold;
+                `;
+                document.body.appendChild(errorDiv);
+            }
+            
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (errorDiv && errorDiv.parentNode) {
+                    errorDiv.style.display = 'none';
+                }
+            }, 5000);
+        }
+
         // Supabase configuration
         const VISITOR_CONFIG = {
             supabaseUrl: 'https://obyzwhqaqyiqpeoefjgw.supabase.co',
             supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ieXp3aHFhcXlpcXBlb2Vmamd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDY0MDAsImV4cCI6MjA2NzU4MjQwMH0.NaePwt-LGqNp4vc8TTcv3IyzFkamZtiHmvDLpDcliAc'
         };
 
+        // Initialize Supabase client for legacy code compatibility
+        const supabase = {
+            from: function(table) {
+                return {
+                    select: function(columns) {
+                        return {
+                            eq: function(column, value) {
+                                // Convert to standard fetch call
+                                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}&select=${columns}`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}`);
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => ({
+                                    data: data,
+                                    error: null
+                                }))
+                                .catch(error => ({
+                                    data: null,
+                                    error: error
+                                }));
+                            }
+                        };
+                    }
+                };
+            }
+        };
+
         // LOGIN FUNCTION - MOVED TO TOP LEVEL
         function doLogin(event) {
-    event.preventDefault();
+            if (event) event.preventDefault();
             console.log('Login function called');
             const email = document.getElementById('emailAddress').value.trim().toLowerCase();
             const password = document.getElementById('password').value.trim();
             
             if (!email || !password) {
                 showError('Please enter both email and password.');
+                return;
+            }
+            
+            // Basic email validation
+            if (!email.includes('@') || !email.includes('.')) {
+                showError('Please enter a valid email address.');
                 return;
             }
             
@@ -755,30 +880,6 @@
 
         let clientProfilesLoaded = false;
         let staffProfilesLoaded = false;
-
-        async function loadClientProfiles() {
-            const currentLocation = getLocationName();
-            const { data, error } = await supabase
-                .from('client_profiles')
-                .select('id, first_name, surname, email, mobile, user_type, location, status')
-                .eq('location', currentLocation);
-
-            clientProfiles = data || [];
-            clientProfilesLoaded = true;
-            console.log('Loaded client profiles:', clientProfiles);
-        }
-
-        async function loadStaffProfiles() {
-            const currentLocation = getLocationName();
-            const { data, error } = await supabase
-                .from('staff_profiles')
-                .select('id, first_name, surname, email, mobile, user_type, location, status')
-                .eq('location', currentLocation);
-
-            staffProfiles = data || [];
-            staffProfilesLoaded = true;
-            console.log('Loaded staff profiles:', staffProfiles);
-        }
 
         // Check if user is already logged in from previous session
         function checkAutoLogin() {
@@ -860,7 +961,7 @@
                 return data || [];
             })
             .catch(error => {
-                console.error(`❌ Error loading clients for ${location}:`, error);
+                handleApiError(error, `Loading clients for ${location}`);
                 return [];
             });
         }
@@ -898,7 +999,7 @@
                 return data || [];
             })
             .catch(error => {
-                console.error(`❌ Error loading staff for ${location}:`, error);
+                handleApiError(error, `Loading staff for ${location}`);
                 return [];
             });
         }
@@ -1639,7 +1740,7 @@
                     console.log('✅ Data synced to Supabase successfully:', result);
                 })
                 .catch(error => {
-                    console.error('❌ Supabase sync error:', error);
+                    handleApiError(error, 'Syncing visitor data to database');
                 });
                 
                 return true;
@@ -1675,6 +1776,23 @@
             
             console.log('No matching arrival found for:', departureData.firstName, departureData.surname);
             return -1; // No match found
+        }
+
+        function calculateFeedbackAverage(feedback) {
+            const ratings = [
+                feedback.overall || 0,
+                feedback.safety || 0,
+                feedback.responsive || 0,
+                feedback.caring || 0,
+                feedback.leadership || 0,
+                feedback.effectiveness || 0
+            ];
+            
+            const validRatings = ratings.filter(rating => rating > 0);
+            if (validRatings.length === 0) return null;
+            
+            const sum = validRatings.reduce((total, rating) => total + rating, 0);
+            return (sum / validRatings.length).toFixed(2);
         }
 
         function showSuccess(personalMessage, systemMessage) {
@@ -2467,11 +2585,33 @@
         // Add Enter key support and event listeners
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('emailAddress').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') doLogin();
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doLogin(e);
+                }
             });
             document.getElementById('password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') doLogin();
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doLogin(e);
+                }
             });
+            
+            // Add touch event support for better iPad/mobile compatibility
+            const loginButton = document.querySelector('button[type="submit"]');
+            if (loginButton) {
+                // Add touch event listeners for iPad compatibility
+                loginButton.addEventListener('touchstart', function(e) {
+                    e.stopPropagation();
+                }, {passive: true});
+                
+                loginButton.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Trigger the form submission
+                    doLogin(e);
+                }, {passive: false});
+            }
             
             // Add click outside to close client dropdown
             document.addEventListener('click', function(e) {
@@ -3074,16 +3214,7 @@
             buildArrivalForm();
             saveSessionState();
         }
-    
-document.addEventListener("DOMContentLoaded", function () {
-  const loginForm = document.getElementById("loginForm");
-  if (loginForm) {
-    loginForm.addEventListener("submit", function (event) {
-      event.preventDefault();
-      doLogin();
-    });
-  }
-});
+
 
 </script>
 </body>
