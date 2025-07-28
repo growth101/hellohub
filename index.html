@@ -1,9 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
     <title>HelloHub - Alex Davis Care Group</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,6 +16,37 @@
             min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
             position: relative;
             transition: all 0.5s ease;
+            /* Enhanced iPad Safari fixes */
+            -webkit-text-size-adjust: 100%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            /* Prevent iPad Safari bounce/scroll issues */
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+            /* Fix iPad rendering issues */
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        /* iPad-specific body fixes */
+        @media (max-width: 1024px) {
+            body {
+                /* Ensure proper rendering on iPad */
+                min-height: -webkit-fill-available;
+                min-height: fill-available;
+                /* Fix iPad Safari viewport issues */
+                position: fixed;
+                width: 100%;
+                overflow: hidden;
+            }
+        }
+        
+        /* Fix for iPad Safari 100vh issues */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                min-height: -webkit-fill-available;
+            }
         }
         
         /* Background images for each location */
@@ -67,6 +101,42 @@
             max-width: 500px; width: 100%; min-height: 600px; position: relative;
             backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
             border: 1px solid rgba(255, 255, 255, 0.3);
+            /* Enhanced iPad compatibility */
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            /* Ensure container is accessible on iPad */
+            overflow: visible;
+        }
+        
+        /* iPad-specific container fixes */
+        @media (max-width: 1024px) {
+            .container {
+                /* Ensure container fits properly on iPad */
+                max-height: 90vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                /* Fix positioning issues on iPad */
+                margin: 20px auto;
+                /* Prevent container from being cut off */
+                position: relative;
+                z-index: 1;
+            }
+        }
+        
+        /* Ensure login page is always accessible on iPad */
+        #loginPage {
+            /* Fix any potential z-index issues */
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* iPad Safari form fixes */
+        @media (max-width: 1024px) {
+            #loginPage form {
+                /* Ensure form is properly positioned */
+                position: relative;
+                z-index: 20;
+            }
         }
         .header {
             background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 40px 30px; text-align: center; border-radius: 20px 20px 0 0;
@@ -97,13 +167,53 @@
         input, select {
             width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
             font-size: 16px; background: #f8f9fa; transition: all 0.3s ease;
-            /* Fix iOS Safari styling issues */
+            /* Enhanced iOS Safari styling fixes */
             -webkit-appearance: none;
             -webkit-border-radius: 12px;
-            /* Prevent zoom on focus for mobile devices */
+            -moz-appearance: none;
+            appearance: none;
+            /* Prevent zoom on focus for mobile devices - CRITICAL FOR IPAD */
             font-size: 16px;
             /* Improve touch handling */
             touch-action: manipulation;
+            /* Fix iOS Safari text selection and input issues */
+            -webkit-user-select: text;
+            user-select: text;
+            /* Prevent iOS Safari from adding its own styling */
+            background-clip: padding-box;
+            /* Fix iOS Safari border rendering */
+            border-style: solid;
+            /* Ensure consistent box model on iOS */
+            box-sizing: border-box;
+            /* Fix iOS input field rendering issues */
+            -webkit-rtl-ordering: logical;
+            -webkit-text-security: none;
+        }
+        
+        /* iPad-specific input fixes */
+        @media (max-width: 1024px) {
+            input, select {
+                /* Ensure inputs work properly on iPad */
+                -webkit-tap-highlight-color: rgba(0,0,0,0);
+                /* Fix iPad Safari input focus issues */
+                -webkit-user-modify: read-write-plaintext-only;
+            }
+        }
+        
+        /* Specific fixes for email and password inputs on iPad */
+        input[type="email"], input[type="password"] {
+            /* Prevent iOS Safari from interfering with these input types */
+            -webkit-text-security: none;
+            text-security: none;
+            /* Fix autocomplete issues on iPad */
+            -webkit-autocomplete: on;
+            autocomplete: on;
+        }
+        
+        input[type="password"] {
+            /* Ensure password field works correctly on iPad */
+            -webkit-text-security: disc;
+            text-security: disc;
         }
         
         /* Business dropdown specific styling with down arrow */
@@ -125,11 +235,48 @@
         .btn {
             width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold;
             cursor: pointer; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
-            /* Improve touch handling for mobile devices */
+            /* Enhanced touch handling for mobile devices - CRITICAL FOR IPAD */
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            /* Fix iPad Safari button rendering */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            /* Ensure buttons work on touchscreens */
+            position: relative;
+            /* Fix iOS Safari button focus issues */
+            -webkit-focus-ring-color: transparent;
+            outline: none;
+            /* Prevent iOS Safari text selection on buttons */
+            -webkit-touch-callout: none;
+            /* Fix iPad button click delay */
+            -webkit-user-drag: none;
+            /* Ensure consistent rendering on iOS */
+            background-clip: padding-box;
+            border: 1px solid transparent;
+        }
+        
+        /* iPad-specific button improvements */
+        @media (max-width: 1024px) {
+            .btn {
+                /* Larger touch targets for iPad */
+                min-height: 50px;
+                /* Remove iOS Safari default button styling */
+                -webkit-appearance: none;
+                -webkit-border-radius: 12px;
+                /* Fix touch response issues */
+                -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+            }
+            
+            .btn:active {
+                /* Provide immediate visual feedback on iPad */
+                transform: scale(0.98);
+                transition: transform 0.1s ease;
+            }
         }
         .btn-primary { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
         .btn-success { background: linear-gradient(135deg, #00b894, #00a085); color: white; }
@@ -387,18 +534,30 @@
             </div>
 <div id="loginPage" class="page active">
   <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Company Login</h2>
-  <form onsubmit="doLogin(event)">
+  <form id="loginForm" onsubmit="return handleLoginSubmit(event);" novalidate>
     <div class="form-group">
       <label for="emailAddress">Email Address:</label>
-      <input type="email" id="emailAddress" placeholder="Enter your company email" autocomplete="username" />
+      <input type="email" id="emailAddress" name="emailAddress" placeholder="Enter your company email" 
+             autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" 
+             data-testid="email-input" />
     </div>
     <div class="form-group">
       <label for="password">Password:</label>
-      <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" />
+      <input type="password" id="password" name="password" placeholder="Enter your password" 
+             autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"
+             data-testid="password-input" />
     </div>
-    <button class="btn btn-primary" type="submit">🔐 Login</button>
+    <button class="btn btn-primary" type="submit" id="loginButton" data-testid="login-button">🔐 Login</button>
   </form>
   <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+  
+  <!-- iPad Troubleshooting Section -->
+  <div id="iPadTroubleshooting" style="margin-top: 20px; text-align: center;">
+    <button type="button" class="btn" onclick="showIPadDiagnostics()" 
+            style="background: #6c757d; color: white; font-size: 12px; padding: 8px 16px; margin: 0; width: auto; text-transform: none; letter-spacing: normal;">
+      iPad Not Working? Tap for Help
+    </button>
+  </div>
 </div>
             <div id="businessSelect" class="page">
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Select Location</h2>
@@ -821,22 +980,55 @@
             }
         };
 
-        // LOGIN FUNCTION - MOVED TO TOP LEVEL
+        // Enhanced login function with iPad compatibility
+        function handleLoginSubmit(event) {
+            console.log('iPad-compatible login handler called');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Small delay to ensure iPad processes the form submission properly
+            setTimeout(() => {
+                doLogin(event);
+            }, 10);
+            
+            return false; // Prevent default form submission
+        }
+        
+        // LOGIN FUNCTION - ENHANCED FOR IPAD COMPATIBILITY
         function doLogin(event) {
-            if (event) event.preventDefault();
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
             console.log('Login function called');
-            const email = document.getElementById('emailAddress').value.trim().toLowerCase();
-            const password = document.getElementById('password').value.trim();
+            
+            // Get form elements with additional safety checks for iPad
+            const emailField = document.getElementById('emailAddress');
+            const passwordField = document.getElementById('password');
+            
+            if (!emailField || !passwordField) {
+                console.error('Login form fields not found');
+                showError('Login form error. Please refresh the page.');
+                return false;
+            }
+            
+            const email = emailField.value.trim().toLowerCase();
+            const password = passwordField.value.trim();
+            
+            console.log('Email length:', email.length, 'Password length:', password.length);
             
             if (!email || !password) {
                 showError('Please enter both email and password.');
-                return;
+                return false;
             }
             
             // Basic email validation
             if (!email.includes('@') || !email.includes('.')) {
                 showError('Please enter a valid email address.');
-                return;
+                return false;
             }
             
             if (email === 'office@alexdavis.co.uk' && password === 'office927') {
@@ -854,8 +1046,9 @@
                 };
                 localStorage.setItem('hellohubAuth', JSON.stringify(loginData));
                 
-                document.getElementById('emailAddress').value = '';
-                document.getElementById('password').value = '';
+                // Clear form fields
+                emailField.value = '';
+                passwordField.value = '';
                 hideError();
                 
                 // Start preloading data immediately after login
@@ -864,9 +1057,12 @@
                 setupBusinessDropdown();
                 showPage('businessSelect');
                 saveSessionState();
+                
+                return true;
             } else {
-                console.log('Login failed');
+                console.log('Login failed - incorrect credentials');
                 showError('Invalid email or password.');
+                return false;
             }
         }
 
@@ -1031,12 +1227,104 @@
 
         function showError(message) {
             const errorDiv = document.getElementById('loginError');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                console.error('Login error:', message);
+                
+                // Add iPad-specific debugging information
+                const debugInfo = getIPadDebugInfo();
+                console.log('iPad Debug Info:', debugInfo);
+            }
         }
 
         function hideError() {
-            document.getElementById('loginError').style.display = 'none';
+            const errorDiv = document.getElementById('loginError');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        }
+        
+        // iPad debugging function to help troubleshoot issues
+        function getIPadDebugInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                isIPad: /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document,
+                isSafari: /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor),
+                screenSize: `${window.screen.width}x${window.screen.height}`,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                devicePixelRatio: window.devicePixelRatio,
+                orientation: window.orientation,
+                localStorage: typeof(Storage) !== "undefined",
+                touchSupport: 'ontouchstart' in window,
+                formElements: {
+                    emailField: !!document.getElementById('emailAddress'),
+                    passwordField: !!document.getElementById('password'),
+                    loginForm: !!document.getElementById('loginForm'),
+                    loginButton: !!document.getElementById('loginButton')
+                }
+            };
+        }
+        
+        // Enhanced error reporting for iPad issues
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e);
+            console.log('iPad Debug Info at time of error:', getIPadDebugInfo());
+        });
+        
+        // Log iPad detection on page load
+        window.addEventListener('load', function() {
+            const debugInfo = getIPadDebugInfo();
+            console.log('=== iPad Compatibility Check ===');
+            console.log('Device detected as iPad:', debugInfo.isIPad);
+            console.log('Safari browser:', debugInfo.isSafari);
+            console.log('Touch support:', debugInfo.touchSupport);
+            console.log('All login form elements present:', 
+                debugInfo.formElements.emailField && 
+                debugInfo.formElements.passwordField && 
+                debugInfo.formElements.loginForm && 
+                debugInfo.formElements.loginButton
+            );
+            console.log('Full debug info:', debugInfo);
+        });
+        
+        // iPad troubleshooting function
+        function showIPadDiagnostics() {
+            const debugInfo = getIPadDebugInfo();
+            
+            let diagnosticMessage = "iPad Diagnostic Information:\\n\\n";
+            diagnosticMessage += `Device: ${debugInfo.isIPad ? 'iPad Detected' : 'Not iPad'}\\n`;
+            diagnosticMessage += `Browser: ${debugInfo.isSafari ? 'Safari' : 'Other'}\\n`;
+            diagnosticMessage += `Touch Support: ${debugInfo.touchSupport ? 'Yes' : 'No'}\\n`;
+            diagnosticMessage += `Screen: ${debugInfo.screenSize}\\n`;
+            diagnosticMessage += `Viewport: ${debugInfo.viewportSize}\\n`;
+            
+            const formElementsWorking = debugInfo.formElements.emailField && 
+                                        debugInfo.formElements.passwordField && 
+                                        debugInfo.formElements.loginForm && 
+                                        debugInfo.formElements.loginButton;
+            
+            diagnosticMessage += `Form Elements: ${formElementsWorking ? 'All Present' : 'Missing Elements'}\\n\\n`;
+            
+            if (!formElementsWorking) {
+                diagnosticMessage += "ISSUE: Form elements missing. Try refreshing the page.\\n\\n";
+            }
+            
+            diagnosticMessage += "Common Solutions:\\n";
+            diagnosticMessage += "1. Clear Safari cache and cookies\\n";
+            diagnosticMessage += "2. Close and reopen Safari\\n";  
+            diagnosticMessage += "3. Restart iPad\\n";
+            diagnosticMessage += "4. Update Safari/iPad OS\\n";
+            diagnosticMessage += "5. Try typing credentials manually (no copy/paste)\\n\\n";
+            
+            diagnosticMessage += "If login still fails, check console logs or contact support.";
+            
+            alert(diagnosticMessage);
+            
+            // Also log to console for technical users
+            console.log('=== iPad Diagnostic Report ===');
+            console.log(debugInfo);
         }
 
         function setupBusinessDropdown() {
@@ -2582,36 +2870,101 @@
 
         // Initialize when page loads
         
-        // Add Enter key support and event listeners
+        // Enhanced iPad-compatible event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('emailAddress').addEventListener('keypress', function(e) {
+            console.log('DOM loaded, setting up iPad-compatible event listeners');
+            
+            // Get form elements with safety checks
+            const emailField = document.getElementById('emailAddress');
+            const passwordField = document.getElementById('password');
+            const loginForm = document.getElementById('loginForm');
+            const loginButton = document.getElementById('loginButton');
+            
+            if (!emailField || !passwordField || !loginForm || !loginButton) {
+                console.error('Login form elements not found');
+                return;
+            }
+            
+            // Enhanced Enter key support for iPad
+            emailField.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    doLogin(e);
-                }
-            });
-            document.getElementById('password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    doLogin(e);
+                    e.stopPropagation();
+                    // Focus on password field if email has content
+                    if (this.value.trim()) {
+                        passwordField.focus();
+                    }
                 }
             });
             
-            // Add touch event support for better iPad/mobile compatibility
-            const loginButton = document.querySelector('button[type="submit"]');
-            if (loginButton) {
-                // Add touch event listeners for iPad compatibility
-                loginButton.addEventListener('touchstart', function(e) {
-                    e.stopPropagation();
-                }, {passive: true});
-                
-                loginButton.addEventListener('touchend', function(e) {
+            passwordField.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     e.stopPropagation();
-                    // Trigger the form submission
-                    doLogin(e);
-                }, {passive: false});
-            }
+                    handleLoginSubmit(e);
+                }
+            });
+            
+            // Enhanced form submission handling for iPad
+            loginForm.addEventListener('submit', handleLoginSubmit);
+            
+            // Comprehensive iPad touch event support
+            let touchStartTime = 0;
+            
+            loginButton.addEventListener('touchstart', function(e) {
+                console.log('Touch start on login button');
+                touchStartTime = Date.now();
+                e.stopPropagation();
+                // Visual feedback
+                this.style.transform = 'scale(0.98)';
+            }, {passive: true});
+            
+            loginButton.addEventListener('touchend', function(e) {
+                console.log('Touch end on login button');
+                const touchDuration = Date.now() - touchStartTime;
+                
+                // Reset visual feedback
+                this.style.transform = 'scale(1)';
+                
+                // Only trigger if it was a quick tap (not a long press)
+                if (touchDuration < 1000) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Triggering iPad login submission');
+                    handleLoginSubmit(e);
+                }
+            }, {passive: false});
+            
+            // Additional iPad-specific click handler as fallback
+            loginButton.addEventListener('click', function(e) {
+                console.log('Click event on login button');
+                e.preventDefault();
+                e.stopPropagation();
+                handleLoginSubmit(e);
+            });
+            
+            // Fix iPad Safari input issues
+            [emailField, passwordField].forEach(field => {
+                // Focus enhancement for iPad
+                field.addEventListener('focus', function() {
+                    console.log('Input field focused:', this.id);
+                    // Small delay to ensure iPad Safari processes focus correctly
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                });
+                
+                // Blur enhancement for iPad
+                field.addEventListener('blur', function() {
+                    console.log('Input field blurred:', this.id);
+                });
+                
+                // Input enhancement for iPad
+                field.addEventListener('input', function() {
+                    // Clear any existing errors when user starts typing
+                    hideError();
+                });
+            });
             
             // Add click outside to close client dropdown
             document.addEventListener('click', function(e) {
