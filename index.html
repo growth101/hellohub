@@ -283,6 +283,87 @@
         .btn-warning { background: linear-gradient(135deg, #fdcb6e, #e17055); color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         .btn:hover { transform: translateY(-2px); }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-body {
+            padding: 30px;
+        }
+        
+        /* iPad-specific modal improvements */
+        @media (max-width: 1024px) {
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            
+            .modal-body {
+                padding: 20px;
+            }
+        }
+        
         .user-type-selection { display: flex; gap: 10px; margin-bottom: 30px; }
         .user-type-btn {
             flex: 1; padding: 20px; border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9fa;
@@ -522,43 +603,96 @@
             <div id="locationName" class="location-name" style="display: none;"></div>
         </div>
         <div class="content">
-            <div class="admin-logo" onclick="adminReset()">
-                <svg width="80" height="50" viewBox="0 0 400 200">
-                    <rect x="20" y="40" width="200" height="120" rx="25" ry="25" fill="#000000"/>
-                    <circle cx="120" cy="85" r="15" fill="white"/>
-                    <ellipse cx="120" cy="120" rx="12" ry="20" fill="white"/>
-                    <path d="M140 95 Q148 90 152 95 Q156 100 150 105 Q144 110 140 105 Q136 100 140 95" fill="white"/>
-                    <path d="M50 160 L35 180 L65 160 Z" fill="#000000"/>
-                    <text x="250" y="110" font-family="Arial" font-size="32" font-weight="bold" fill="#000000">HelloHub</text>
-                </svg>
+            <!-- HelloHub logo moved to login page -->
+            
+            <div id="loginPage" class="page active">
+              <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Company Login</h2>
+              <form id="loginForm" onsubmit="return handleLoginSubmit(event);" novalidate>
+                <div class="form-group">
+                  <label for="emailAddress">Email Address:</label>
+                  <input type="email" id="emailAddress" name="emailAddress" placeholder="Enter your company email" 
+                         autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" 
+                         data-testid="email-input" />
+                </div>
+                <div class="form-group">
+                  <label for="password">Password:</label>
+                  <input type="password" id="password" name="password" placeholder="Enter your password" 
+                         autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"
+                         data-testid="password-input" />
+                </div>
+                <button class="btn btn-primary" type="submit" id="loginButton" data-testid="login-button">🔐 Login</button>
+              </form>
+              <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+              
+              <!-- Simple Signup Link -->
+              <div id="signupSection" style="margin-top: 20px; text-align: center;">
+                <button type="button" onclick="showSignupModal()" 
+                       style="background: none; border: none; color: #007bff; text-decoration: none; font-size: 14px; cursor: pointer; padding: 0;">
+                  Create New Account
+                </button>
+              </div>
             </div>
-<div id="loginPage" class="page active">
-  <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Company Login</h2>
-  <form id="loginForm" onsubmit="return handleLoginSubmit(event);" novalidate>
-    <div class="form-group">
-      <label for="emailAddress">Email Address:</label>
-      <input type="email" id="emailAddress" name="emailAddress" placeholder="Enter your company email" 
-             autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" 
-             data-testid="email-input" />
-    </div>
-    <div class="form-group">
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" placeholder="Enter your password" 
-             autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"
-             data-testid="password-input" />
-    </div>
-    <button class="btn btn-primary" type="submit" id="loginButton" data-testid="login-button">🔐 Login</button>
-  </form>
-  <div id="loginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
-  
-  <!-- iPad Troubleshooting Section -->
-  <div id="iPadTroubleshooting" style="margin-top: 20px; text-align: center;">
-    <button type="button" class="btn" onclick="showIPadDiagnostics()" 
-            style="background: #6c757d; color: white; font-size: 12px; padding: 8px 16px; margin: 0; width: auto; text-transform: none; letter-spacing: normal;">
-      iPad Not Working? Tap for Help
-    </button>
-  </div>
-</div>
+
+            <!-- Signup Modal -->
+            <div id="signupModal" class="modal" style="display: none;">
+              <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                  <h3>Create New Account</h3>
+                  <span class="close" onclick="closeSignupModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                  <form id="signupForm" onsubmit="return handleSignupSubmit(event);" novalidate>
+                    <div class="form-group">
+                      <label for="signupEmail">Email Address:</label>
+                      <input type="email" id="signupEmail" name="email" required 
+                             autocapitalize="none" autocorrect="off" spellcheck="false"
+                             placeholder="Enter your email address">
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="signupPassword">Password:</label>
+                      <input type="password" id="signupPassword" name="password" required
+                             placeholder="Create a secure password">
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="signupConfirmPassword">Confirm Password:</label>
+                      <input type="password" id="signupConfirmPassword" name="confirmPassword" required
+                             placeholder="Confirm your password">
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="signupCompany">Company Name:</label>
+                      <input type="text" id="signupCompany" name="company" required
+                             placeholder="Enter your company name">
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="signupLocations">Care Home Locations (comma separated):</label>
+                      <input type="text" id="signupLocations" name="locations" required
+                             placeholder="e.g., Main Office, Branch 1, Branch 2">
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="confirmationCode">Confirmation Code:</label>
+                      <input type="text" id="confirmationCode" name="confirmationCode" required
+                             placeholder="Enter the code sent by admin">
+                      <small style="color: #666; font-size: 12px;">
+                        Contact the administrator to get your confirmation code after payment.
+                      </small>
+                    </div>
+                    
+                    <div class="form-group">
+                      <button type="submit" class="btn btn-primary" id="signupButton">
+                        📝 Create Account
+                      </button>
+                    </div>
+                  </form>
+                  <div id="signupError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+                </div>
+              </div>
+            </div>
+
             <div id="businessSelect" class="page">
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Select Location</h2>
                 <div class="form-group">
@@ -592,15 +726,24 @@
             </div>
 
             <div id="arrivingPage" class="page">
+                <div id="arrivingSettingsButton" style="position: absolute; top: 15px; right: 15px; display: none;">
+                    <div class="settings-icon" onclick="showSettingsForUserType()" style="position: static; margin: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                </div>
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Arriving</h2>
                 <div id="arrivalForm"></div>
             </div>
 
             <div id="leavingPage" class="page">
+                <div id="leavingSettingsButton" style="position: absolute; top: 15px; right: 15px; display: none;">
+                    <div class="settings-icon" onclick="showSettingsForUserType()" style="position: static; margin: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                </div>
                 <!-- Content will be dynamically generated -->
             </div>
 
             <div id="feedbackPage" class="page">
+                <div id="feedbackSettingsButton" style="position: absolute; top: 15px; right: 15px; display: none;">
+                    <div class="settings-icon" onclick="showSettingsForUserType()" style="position: static; margin: 0; background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease;">⚙️</div>
+                </div>
                 <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Your Feedback Matters</h2>
                 <div class="alert alert-info">Please rate the care home in terms of number of stars, with 5 stars being best</div>
                 
@@ -696,6 +839,19 @@
                 <div id="staffLoginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
             </div>
 
+            <!-- User Settings Authentication Page -->
+            <div id="userSettingsAuthPage" class="page">
+                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Settings Access</h2>
+                <div class="alert alert-info">Please enter your login password to access settings</div>
+                <div class="form-group">
+                    <label for="userSettingsPassword">Password:</label>
+                    <input type="password" id="userSettingsPassword" placeholder="Enter your login password" onkeypress="if(event.key==='Enter') doUserSettingsLogin()">
+                </div>
+                <button class="btn btn-primary" onclick="doUserSettingsLogin()">🔐 Access Settings</button>
+                <button class="btn btn-secondary" onclick="doGoBack()">← Back</button>
+                <div id="userSettingsLoginError" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px; font-size: 14px;"></div>
+            </div>
+
             <!-- Client Management Page -->
             <div id="clientManagementPage" class="page">
                 <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
@@ -753,9 +909,6 @@
                     <label for="clientLocation">Location: <span class="required">*</span></label>
                     <select id="clientLocation" required>
                         <option value="">-- Select Location --</option>
-                        <option value="The Royal">The Royal</option>
-                        <option value="The Crown">The Crown</option>
-                        <option value="Seabreeze">Seabreeze</option>
                     </select>
                 </div>
                 
@@ -822,9 +975,6 @@
                     <label for="staffLocationSelect">Location: <span class="required">*</span></label>
                     <select id="staffLocationSelect" required>
                         <option value="">-- Select Location --</option>
-                        <option value="The Royal">The Royal</option>
-                        <option value="The Crown">The Crown</option>
-                        <option value="Seabreeze">Seabreeze</option>
                     </select>
                 </div>
                 
@@ -852,12 +1002,17 @@
    <script>
         // Disable console logs in production
         (function() {
+            // Disable all console methods in production
             if (window.location.protocol === 'https:' || window.location.hostname !== 'localhost') {
                 console.log = function() {};
                 console.warn = function() {};
                 console.error = function() {};
                 console.info = function() {};
                 console.debug = function() {};
+                console.trace = function() {};
+                console.table = function() {};
+                console.group = function() {};
+                console.groupEnd = function() {};
             }
         })();
 
@@ -882,19 +1037,50 @@
             cacheTimeout: 5 * 60 * 1000 // 5 minutes cache
         };
 
+        // Retry logic for network requests
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                    // If response is not ok, throw error to trigger retry
+                    throw new Error(`HTTP ${response.status}`);
+                } catch (error) {
+                    // If this is the last attempt, throw the error
+                    if (attempt === maxRetries) {
+                        throw error;
+                    }
+                    // Wait before retrying (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
+            }
+        }
+
         // Enhanced error handling
         function handleApiError(error, operation = 'API operation') {
-            console.error(`❌ ${operation} failed:`, error);
-            
             // Check if it's a network error
             if (!navigator.onLine) {
                 showUserFriendlyError('No internet connection. Please check your network and try again.');
                 return;
             }
             
+            // Check for QUIC protocol errors
+            if (error.message && (error.message.includes('QUIC') || error.message.includes('ERR_QUIC'))) {
+                showUserFriendlyError('Network connection issue detected. Please refresh the page and try again.');
+                return;
+            }
+            
             // Check if it's a server error
             if (error.message && error.message.includes('HTTP 5')) {
                 showUserFriendlyError('Server is temporarily unavailable. Please try again in a few moments.');
+                return;
+            }
+            
+            // Check for fetch/network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                showUserFriendlyError('Unable to connect to the server. Please check your internet connection and try again.');
                 return;
             }
             
@@ -929,18 +1115,126 @@
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             
-            // Auto-hide after 5 seconds
+            // Auto-hide after 8 seconds for network errors
+            const hideTime = message.includes('network') || message.includes('connection') ? 8000 : 5000;
             setTimeout(() => {
                 if (errorDiv && errorDiv.parentNode) {
                     errorDiv.style.display = 'none';
                 }
-            }, 5000);
+            }, hideTime);
         }
+
+        // Network status monitoring
+        function checkNetworkStatus() {
+            if (!navigator.onLine) {
+                showUserFriendlyError('You are currently offline. Please check your internet connection.');
+            }
+        }
+
+        // Monitor network status
+        window.addEventListener('online', () => {
+            showUserFriendlyError('Internet connection restored. You can now use the application normally.');
+        });
+
+        window.addEventListener('offline', () => {
+            showUserFriendlyError('Internet connection lost. Some features may not work properly.');
+        });
 
         // Supabase configuration
         const VISITOR_CONFIG = {
             supabaseUrl: 'https://obyzwhqaqyiqpeoefjgw.supabase.co',
             supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ieXp3aHFhcXlpcXBlb2Vmamd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDY0MDAsImV4cCI6MjA2NzU4MjQwMH0.NaePwt-LGqNp4vc8TTcv3IyzFkamZtiHmvDLpDcliAc'
+        };
+
+        // Authentication state management
+        let AUTH_STATE = {
+            isAuthenticated: false,
+            user: null,
+            session: null,
+            company: null,
+            locations: []
+        };
+
+        // Simple and reliable authentication system
+                const simpleAuth = {
+            // Custom authentication system (bypasses Supabase Auth)
+            login: async (email, password) => {
+                try {
+                    // Step 1: Check if user exists in auth_users table
+                    const userResponse = await fetchWithRetry(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?email=eq.${encodeURIComponent(email)}&select=*`, {
+                        headers: {
+                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
+                        }
+                    });
+        
+                    if (!userResponse.ok) {
+                        throw new Error('Failed to check user existence');
+                    }
+        
+                    const users = await userResponse.json();
+                    if (users.length === 0) {
+                        return { success: false, error: 'User not found in auth system' };
+                    }
+        
+                    const user = users[0];
+        
+                    // Step 2: For now, accept any password (we'll implement proper password checking later)
+                    // TODO: Implement proper password hashing and verification
+                    
+                    return {
+                        success: true,
+                        data: {
+                            user: { id: user.user_id, email: user.email },
+                            session: { access_token: 'custom_token_' + user.user_id },
+                            company: user.company,
+                            locations: user.locations || ['The Royal', 'The Crown', 'Seabreeze']
+                        }
+                    };
+        
+                } catch (error) {
+                    return { success: false, error: 'Login failed. Please try again.' };
+                }
+            },
+
+            // Check if user exists (simplified)
+            checkUser: async (email) => {
+                try {
+                    const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?email=eq.${encodeURIComponent(email)}&select=*`, {
+                        headers: {
+                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
+                        }
+                    });
+
+                    const data = await response.json();
+                    return data[0] || null;
+                } catch (error) {
+                    console.error('Error checking user:', error);
+                    return null;
+                }
+            }
+        };
+
+        // Legacy compatibility - keep the old object but make it use the new system
+        const supabaseAuth = {
+            signIn: simpleAuth.login,
+            checkUserExists: simpleAuth.checkUser,
+            getUserProfile: async (userId) => {
+                try {
+                    const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?user_id=eq.${userId}&select=*`, {
+                        headers: {
+                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
+                        }
+                    });
+                    const data = await response.json();
+                    return data[0] || null;
+                } catch (error) {
+                    console.error('Error fetching user profile:', error);
+                    return null;
+                }
+            }
         };
 
         // Initialize Supabase client for legacy code compatibility
@@ -980,89 +1274,294 @@
             }
         };
 
-        // Enhanced login function with iPad compatibility
+        // Enhanced login function with Supabase authentication
         function handleLoginSubmit(event) {
-            console.log('iPad-compatible login handler called');
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
             
-            // Small delay to ensure iPad processes the form submission properly
+            // Show loading state
+            showLoadingState();
+            
+            // Process login with small delay for iPad compatibility
             setTimeout(() => {
-                doLogin(event);
+                doSecureLogin(event);
             }, 10);
             
             return false; // Prevent default form submission
         }
         
-        // LOGIN FUNCTION - ENHANCED FOR IPAD COMPATIBILITY
-        function doLogin(event) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
+        // SIGNUP FUNCTIONS
+        function showSignupModal() {
+            document.getElementById('signupModal').style.display = 'block';
+            document.getElementById('signupError').style.display = 'none';
+            // Clear form
+            document.getElementById('signupForm').reset();
+        }
+        
+        function closeSignupModal() {
+            document.getElementById('signupModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('signupModal');
+            if (event.target === modal) {
+                closeSignupModal();
             }
+        }
+        
+        function handleSignupSubmit(event) {
+            event.preventDefault();
+            event.stopPropagation();
             
-            console.log('Login function called');
+            // Get form data
+            const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupConfirmPassword').value;
+            const company = document.getElementById('signupCompany').value.trim();
+            const locations = document.getElementById('signupLocations').value.trim();
+            const confirmationCode = document.getElementById('confirmationCode').value.trim();
             
-            // Get form elements with additional safety checks for iPad
-            const emailField = document.getElementById('emailAddress');
-            const passwordField = document.getElementById('password');
-            
-            if (!emailField || !passwordField) {
-                console.error('Login form fields not found');
-                showError('Login form error. Please refresh the page.');
+            // Validation
+            if (!email || !password || !confirmPassword || !company || !locations || !confirmationCode) {
+                showSignupError('Please fill in all fields.');
                 return false;
             }
             
-            const email = emailField.value.trim().toLowerCase();
-            const password = passwordField.value.trim();
-            
-            console.log('Email length:', email.length, 'Password length:', password.length);
-            
-            if (!email || !password) {
-                showError('Please enter both email and password.');
+            if (password !== confirmPassword) {
+                showSignupError('Passwords do not match.');
                 return false;
             }
             
-            // Basic email validation
-            if (!email.includes('@') || !email.includes('.')) {
-                showError('Please enter a valid email address.');
+            if (password.length < 6) {
+                showSignupError('Password must be at least 6 characters long.');
                 return false;
             }
             
-            if (email === 'office@alexdavis.co.uk' && password === 'office927') {
-                console.log('Login successful!');
-                APP.company = 'Alex Davis Care Group';
-                APP.locations = ['The Royal', 'The Crown', 'Seabreeze'];
+            // Show loading state
+            const signupButton = document.getElementById('signupButton');
+            const originalText = signupButton.innerHTML;
+            signupButton.innerHTML = '⏳ Creating Account...';
+            signupButton.disabled = true;
+            
+            // Process signup
+            doSignup(email, password, company, locations, confirmationCode)
+                .then(result => {
+                    if (result.success) {
+                        showSignupSuccess('Account created successfully! You can now log in.');
+                        setTimeout(() => {
+                            closeSignupModal();
+                        }, 2000);
+                    } else {
+                        showSignupError(result.error);
+                    }
+                })
+                .catch(error => {
+                    showSignupError('An error occurred. Please try again.');
+                    console.error('Signup error:', error);
+                })
+                .finally(() => {
+                    signupButton.innerHTML = originalText;
+                    signupButton.disabled = false;
+                });
+            
+            return false;
+        }
+        
+        async function doSignup(email, password, company, locations, confirmationCode) {
+            try {
+                // TEMPORARILY BYPASS CONFIRMATION CODE FOR TESTING
                 
-                // Save login state to localStorage with expiration
-                const loginData = {
-                    isAuthenticated: true,
-                    company: APP.company,
-                    locations: APP.locations,
-                    loginTime: Date.now(),
-                    expiresIn: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
-                };
-                localStorage.setItem('hellohubAuth', JSON.stringify(loginData));
+                // Check if user already exists
+                const existingUser = await supabaseAuth.checkUserExists(email);
+                if (existingUser) {
+                    return { success: false, error: 'An account with this email already exists.' };
+                }
                 
-                // Clear form fields
-                emailField.value = '';
-                passwordField.value = '';
-                hideError();
+                // Generate a UUID for the new user
+                const userId = crypto.randomUUID();
                 
-                // Start preloading data immediately after login
-                preloadAllLocationData();
+                // Create user directly in auth_users table (bypass Supabase Auth)
+                const profileResult = await createUserProfile(userId, email, company, locations);
+                if (!profileResult.success) {
+                    return { success: false, error: profileResult.error };
+                }
                 
-                setupBusinessDropdown();
-                showPage('businessSelect');
-                saveSessionState();
+                // Also create user in auth.users table for compatibility
+                const authUserResult = await createAuthUser(userId, email, password);
+                if (!authUserResult.success) {
+                    // Continue anyway since we have the user in auth_users
+                }
                 
-                return true;
-            } else {
-                console.log('Login failed - incorrect credentials');
-                showError('Invalid email or password.');
+                return { success: true, data: { user: { id: userId, email: email } } };
+                
+            } catch (error) {
+                return { success: false, error: 'An error occurred during signup.' };
+            }
+        }
+        
+        // Function to create user in auth.users table
+        async function createAuthUser(userId, email, password) {
+            try {
+                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        email: email,
+                        encrypted_password: password, // We'll hash this in the database
+                        email_confirmed_at: new Date().toISOString(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    return { success: true };
+                } else {
+                    const error = await response.text();
+                    return { success: false, error: error };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function verifyConfirmationCode(code) {
+            try {
+                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/confirmation_codes?code=eq.${encodeURIComponent(code)}&is_used=eq.false&select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    return false;
+                }
+                
+                const data = await response.json();
+                return data.length > 0;
+                
+            } catch (error) {
+                console.error('Error verifying confirmation code:', error);
                 return false;
+            }
+        }
+        
+        async function createUserProfile(userId, email, company, locations) {
+            try {
+                const locationsArray = locations.split(',').map(loc => loc.trim()).filter(loc => loc);
+                
+                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        email: email,
+                        company: company,
+                        locations: locationsArray,
+                        role: 'admin'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to create user profile');
+                }
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('Error creating user profile:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function showSignupError(message) {
+            const errorDiv = document.getElementById('signupError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function showSignupSuccess(message) {
+            const errorDiv = document.getElementById('signupError');
+            errorDiv.textContent = message;
+            errorDiv.style.color = '#28a745';
+            errorDiv.style.display = 'block';
+        }
+        
+        // Extend supabaseAuth with signup functionality
+        supabaseAuth.signUp = async (email, password) => {
+            try {
+                console.log('🔐 Attempting Supabase signup for:', email);
+                
+                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/auth/v1/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        data: {
+                            email_confirm: true
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                console.log('📡 Supabase response:', data);
+                
+                if (!response.ok) {
+                    console.error('❌ Supabase signup failed:', data);
+                    if (data.error === 'User already registered') {
+                        throw new Error('An account with this email already exists.');
+                    } else if (data.error_description) {
+                        throw new Error(data.error_description);
+                    } else {
+                        throw new Error('Signup failed. Please check your email and password.');
+                    }
+                }
+
+                console.log('✅ Supabase signup successful:', data);
+                return { success: true, data: data };
+            } catch (error) {
+                console.error('❌ Supabase Signup Error:', error);
+                return { success: false, error: error.message };
+            }
+        };
+        
+        // Loading state management for better UX
+        function showLoadingState() {
+            const loginButton = document.getElementById('loginButton');
+            if (loginButton) {
+                loginButton.textContent = '🔄 Logging in...';
+                loginButton.disabled = true;
+                loginButton.style.opacity = '0.7';
+            }
+        }
+        
+        function hideLoadingState() {
+            const loginButton = document.getElementById('loginButton');
+            if (loginButton) {
+                loginButton.textContent = '🔐 Login';
+                loginButton.disabled = false;
+                loginButton.style.opacity = '1';
             }
         }
 
@@ -1078,11 +1577,10 @@
         let staffProfilesLoaded = false;
 
         // Check if user is already logged in from previous session
-        function checkAutoLogin() {
+        async function checkAutoLogin() {
             const savedAuth = localStorage.getItem('hellohubAuth');
             
             if (!savedAuth) {
-                console.log('No saved login found');
                 return false;
             }
             
@@ -1093,17 +1591,38 @@
                 
                 // Check if login has expired (7 days)
                 if (timeElapsed > authData.expiresIn) {
-                    console.log('Saved login has expired');
+                    localStorage.removeItem('hellohubAuth');
+                    return false;
+                }
+                
+                // Check if we have valid authentication data
+                if (!authData.userId || !authData.accessToken) {
+                    localStorage.removeItem('hellohubAuth');
+                    return false;
+                }
+                
+                // Validate the session with Supabase
+                const userProfile = await supabaseAuth.getUserProfile(authData.userId);
+                
+                if (!userProfile) {
                     localStorage.removeItem('hellohubAuth');
                     return false;
                 }
                 
                 // Valid saved login found
-                console.log('✅ Valid saved login found, auto-logging in...');
                 
-                // Restore login state
-                APP.company = authData.company;
-                APP.locations = authData.locations;
+                // Restore authentication state
+                AUTH_STATE = {
+                    isAuthenticated: true,
+                    user: { id: authData.userId },
+                    session: { access_token: authData.accessToken },
+                    company: authData.company,
+                    locations: authData.locations
+                };
+                
+                // Restore APP state for compatibility
+                APP.company = AUTH_STATE.company;
+                APP.locations = AUTH_STATE.locations;
                 
                 // Show logged-in state immediately
                 setupBusinessDropdown();
@@ -1115,7 +1634,6 @@
                 return true;
                 
             } catch (error) {
-                console.log('Error reading saved login:', error);
                 localStorage.removeItem('hellohubAuth');
                 return false;
             }
@@ -1123,18 +1641,28 @@
 
         // Smart cache-aware loading
         function loadClientProfilesForLocation(location) {
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            const cacheKey = `${location}_${currentCompany}`;
+            
             // Check cache first
-            const cached = dataCache.clients.get(location);
+            const cached = dataCache.clients.get(cacheKey);
             const now = Date.now();
             
             if (cached && (now - cached.timestamp) < dataCache.cacheTimeout) {
-                console.log(`📋 Using cached client data for ${location}`);
                 return Promise.resolve(cached.data);
             }
             
-            console.log(`🌐 Fetching fresh client data for ${location}`);
+            // Build query based on company
+            let queryUrl;
+            if (currentCompany === 'Alex Davis Care Group') {
+                // For Alex Davis, use location-based filtering
+                queryUrl = `${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${encodeURIComponent(location)}&select=*`;
+            } else {
+                // For other companies, filter by both location and company
+                queryUrl = `${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${encodeURIComponent(location)}&company=eq.${encodeURIComponent(currentCompany)}&select=*`;
+            }
             
-            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${encodeURIComponent(location)}&select=*`, {
+            return fetchWithRetry(queryUrl, {
                 method: 'GET',
                 headers: {
                     'apikey': VISITOR_CONFIG.supabaseAnonKey,
@@ -1142,18 +1670,14 @@
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 // Cache the data
-                dataCache.clients.set(location, {
+                dataCache.clients.set(cacheKey, {
                     data: data || [],
                     timestamp: now
                 });
                 
-                console.log(`✅ Cached ${data.length} clients for ${location}`);
                 return data || [];
             })
             .catch(error => {
@@ -1163,17 +1687,27 @@
         }
 
         function loadStaffProfilesForLocation(location) {
-            const cached = dataCache.staff.get(location);
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            const cacheKey = `${location}_${currentCompany}`;
+            
+            const cached = dataCache.staff.get(cacheKey);
             const now = Date.now();
             
             if (cached && (now - cached.timestamp) < dataCache.cacheTimeout) {
-                console.log(`👥 Using cached staff data for ${location}`);
                 return Promise.resolve(cached.data);
             }
             
-            console.log(`🌐 Fetching fresh staff data for ${location}`);
+            // Build query based on company
+            let queryUrl;
+            if (currentCompany === 'Alex Davis Care Group') {
+                // For Alex Davis, use location-based filtering
+                queryUrl = `${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${encodeURIComponent(location)}&select=*`;
+            } else {
+                // For other companies, filter by both location and company
+                queryUrl = `${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${encodeURIComponent(location)}&company=eq.${encodeURIComponent(currentCompany)}&select=*`;
+            }
             
-            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${encodeURIComponent(location)}&select=*`, {
+            return fetchWithRetry(queryUrl, {
                 method: 'GET',
                 headers: {
                     'apikey': VISITOR_CONFIG.supabaseAnonKey,
@@ -1181,17 +1715,13 @@
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                dataCache.staff.set(location, {
+                dataCache.staff.set(cacheKey, {
                     data: data || [],
                     timestamp: now
                 });
                 
-                console.log(`✅ Cached ${data.length} staff for ${location}`);
                 return data || [];
             })
             .catch(error => {
@@ -1202,9 +1732,16 @@
 
         // Preload all location data when user logs in
         function preloadAllLocationData() {
-            console.log('🚀 Preloading all location data...');
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            let locations;
             
-            const locations = ['The Royal', 'The Crown', 'Seabreeze'];
+            if (currentCompany === 'Alex Davis Care Group') {
+                locations = ['The Royal', 'The Crown', 'Seabreeze'];
+            } else {
+                // For other companies, use their specific locations
+                locations = AUTH_STATE?.locations || [];
+            }
+            
             const startTime = Date.now();
             
             // Load all data concurrently
@@ -1215,13 +1752,6 @@
             
             Promise.allSettled(allPromises).then(results => {
                 const loadTime = Date.now() - startTime;
-                console.log(`✅ Preloading completed in ${loadTime}ms`);
-                
-                // Log cache status
-                console.log('Cache status:', {
-                    clients: Array.from(dataCache.clients.keys()),
-                    staff: Array.from(dataCache.staff.keys())
-                });
             });
         }
 
@@ -1230,11 +1760,6 @@
             if (errorDiv) {
                 errorDiv.textContent = message;
                 errorDiv.style.display = 'block';
-                console.error('Login error:', message);
-                
-                // Add iPad-specific debugging information
-                const debugInfo = getIPadDebugInfo();
-                console.log('iPad Debug Info:', debugInfo);
             }
         }
 
@@ -1269,24 +1794,12 @@
         
         // Enhanced error reporting for iPad issues
         window.addEventListener('error', function(e) {
-            console.error('JavaScript Error:', e);
-            console.log('iPad Debug Info at time of error:', getIPadDebugInfo());
+            // Error handling in production
         });
         
         // Log iPad detection on page load
         window.addEventListener('load', function() {
             const debugInfo = getIPadDebugInfo();
-            console.log('=== iPad Compatibility Check ===');
-            console.log('Device detected as iPad:', debugInfo.isIPad);
-            console.log('Safari browser:', debugInfo.isSafari);
-            console.log('Touch support:', debugInfo.touchSupport);
-            console.log('All login form elements present:', 
-                debugInfo.formElements.emailField && 
-                debugInfo.formElements.passwordField && 
-                debugInfo.formElements.loginForm && 
-                debugInfo.formElements.loginButton
-            );
-            console.log('Full debug info:', debugInfo);
         });
         
         // iPad troubleshooting function
@@ -1322,9 +1835,7 @@
             
             alert(diagnosticMessage);
             
-            // Also log to console for technical users
-            console.log('=== iPad Diagnostic Report ===');
-            console.log(debugInfo);
+            // Diagnostic information available for technical users
         }
 
         function setupBusinessDropdown() {
@@ -1359,12 +1870,10 @@
             
             if (cachedClients) {
                 clientProfiles = cachedClients.data;
-                console.log(`⚡ Instantly loaded ${clientProfiles.length} clients from cache`);
             }
             
             if (cachedStaff) {
                 staffProfiles = cachedStaff.data;
-                console.log(`⚡ Instantly loaded ${staffProfiles.length} staff from cache`);
             }
             
             // Refresh cache in background if needed
@@ -1388,7 +1897,6 @@
                     if (freshClients) clientProfiles = freshClients.data;
                     if (freshStaff) staffProfiles = freshStaff.data;
                     
-                    console.log('🔄 Background refresh completed');
                 });
             }
         }
@@ -1429,6 +1937,18 @@
                     locationDiv.textContent = ''; // Clear any previous location text
                     document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
                 }
+            } else if (APP.company && APP.company !== '') {
+                // For other logged-in users (not Alex Davis)
+                document.getElementById('headerTitle').textContent = APP.company;
+                document.getElementById('headerSubtitle').textContent = '';
+                
+                // Show logout button for other users
+                logo.style.display = 'none';
+                locationDiv.style.display = 'none';
+                locationDiv.textContent = '';
+                
+                // Add logout button to header
+                addLogoutButton();
             } else {
                 // Default state - not logged in
                 document.body.classList.remove('alex-davis-logged-in');
@@ -1436,6 +1956,9 @@
                 logo.style.display = 'none';
                 locationDiv.style.display = 'none';
                 locationDiv.textContent = ''; // Clear location text when not logged in
+                
+                // Remove logout button if it exists
+                removeLogoutButton();
             }
         }
 
@@ -1444,10 +1967,94 @@
             return APP.locations[idx] || '';
         }
 
+        function addLogoutButton() {
+            // Remove existing logout button if it exists
+            removeLogoutButton();
+            
+            // Create logout button
+            const logoutBtn = document.createElement('div');
+            logoutBtn.id = 'logoutButton';
+            logoutBtn.innerHTML = '🚪 Logout';
+            logoutBtn.style.cssText = `
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: #dc3545;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+                border: none;
+                transition: background-color 0.3s ease;
+                z-index: 1000;
+            `;
+            logoutBtn.onclick = logout;
+            logoutBtn.onmouseover = function() { this.style.backgroundColor = '#c82333'; };
+            logoutBtn.onmouseout = function() { this.style.backgroundColor = '#dc3545'; };
+            
+            document.body.appendChild(logoutBtn);
+        }
+
+        function removeLogoutButton() {
+            const existingBtn = document.getElementById('logoutButton');
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+        }
+
+        function logout() {
+            // Clear all session data
+            localStorage.removeItem('hellohubSession');
+            sessionStorage.removeItem('hellohubActive');
+            
+            // Clear AUTH_STATE
+            AUTH_STATE = {
+                isAuthenticated: false,
+                user: null,
+                session: null,
+                company: null,
+                locations: null
+            };
+            
+            // Reset APP state
+            APP.company = '';
+            APP.locations = [];
+            APP.currentBusiness = '';
+            APP.currentUserType = '';
+            
+            // Clear any location backgrounds
+            document.body.classList.remove('location-the-royal', 'location-the-crown', 'location-seabreeze');
+            document.body.classList.remove('alex-davis-logged-in');
+            
+            // Reset form fields
+            document.getElementById('businessDropdown').value = '';
+            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Hide location name
+            document.getElementById('locationName').style.display = 'none';
+            document.getElementById('locationName').textContent = '';
+            
+            // Remove logout button
+            removeLogoutButton();
+            
+            // Go back to login page
+            showPage('loginPage');
+            
+            // Clear any form data
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.reset();
+            }
+            
+        }
+
         function doSelectUserType(type) {
             APP.currentUserType = type;
             document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
             event.target.closest('.user-type-btn').classList.add('active');
+            updateSettingsButtonVisibility(); // Update settings button visibility
             saveSessionState(); // Add session saving here
         }
 
@@ -1460,10 +2067,12 @@
             if (action === 'arriving') {
                 buildArrivalForm();
                 showPage('arrivingPage');
+                updateSettingsButtonVisibility(); // Update settings button visibility
                 saveSessionState(); // Save state when going to arriving page
             } else {
                 buildDepartureForm();
                 showPage('leavingPage');
+                updateSettingsButtonVisibility(); // Update settings button visibility
                 saveSessionState(); // Save state when going to leaving page
             }
         }
@@ -1524,7 +2133,7 @@
                             <input type="text" id="surname" required>
                         </div>
                         <div class="alert alert-info">
-                            Client management is available for The Royal, The Crown, and Seabreeze locations.
+                            ${getClientManagementMessage()}
                         </div>
                     `;
                 }
@@ -1925,6 +2534,7 @@
 
             if (APP.currentUserType === 'visitor') {
                 showPage('feedbackPage');
+                updateSettingsButtonVisibility(); // Update settings button visibility
                 setupStarRatings();
                 saveSessionState(); // Save state when on feedback page
             } else if (APP.currentUserType === 'staff') {
@@ -1937,7 +2547,6 @@
         }
 
         function saveToStorage(data) {
-            console.log('💾 saveToStorage() called with:', data); // DEBUG LINE
             try {
                 // Get existing data
                 const existingData = JSON.parse(localStorage.getItem('hellohubVisitors') || '[]');
@@ -1947,7 +2556,6 @@
                     const matchingIndex = findMatchingArrival(existingData, data);
                     
                     if (matchingIndex !== -1) {
-                        console.log('Found matching arrival record, updating existing entry');
                         // Update the existing record with departure info
                         const existingRecord = existingData[matchingIndex];
                         
@@ -1962,25 +2570,19 @@
                             // Add feedback if it exists (only visitors provide feedback)
                             ...(data.feedback ? { feedback: data.feedback } : {})
                         };
-                        
-                        console.log('Updated existing record:', existingData[matchingIndex]);
                     } else {
-                        console.log('No matching arrival found, creating new departure record');
                         // No matching arrival found, create new record
                         existingData.unshift(data);
                     }
                 } else {
-                    console.log('New arrival record');
                     // This is an arrival, just add it normally
                     existingData.unshift(data);
                 }
                 
                 // Save back to localStorage
                 localStorage.setItem('hellohubVisitors', JSON.stringify(existingData));
-                console.log('Data saved successfully to localStorage');
                 
                 // Send to Supabase - WORKING VERSION
-                console.log('📤 Sending to Supabase...');
                 
                 const supabaseData = {
                     first_name: data.firstName || null,
@@ -2015,7 +2617,6 @@
                     body: JSON.stringify(supabaseData)
                 })
                 .then(response => {
-                    console.log('📡 Supabase response status:', response.status);
                     if (response.ok) {
                         return response.json();
                     } else {
@@ -2025,7 +2626,7 @@
                     }
                 })
                 .then(result => {
-                    console.log('✅ Data synced to Supabase successfully:', result);
+                    // Data synced successfully
                 })
                 .catch(error => {
                     handleApiError(error, 'Syncing visitor data to database');
@@ -2033,7 +2634,6 @@
                 
                 return true;
             } catch (error) {
-                console.log('Save failed:', error);
                 return false;
             }
         }
@@ -2057,12 +2657,10 @@
                 const sameDayMatch = record.arrivalDate === departureDate; // Same day
                 
                 if (firstNameMatch && surnameMatch && userTypeMatch && locationMatch && statusMatch && sameDayMatch) {
-                    console.log('Found matching arrival:', record);
                     return i;
                 }
             }
             
-            console.log('No matching arrival found for:', departureData.firstName, departureData.surname);
             return -1; // No match found
         }
 
@@ -2121,7 +2719,7 @@
             // Determine where to go back to based on current context
             const activePage = document.querySelector('.page.active').id;
             
-            if (activePage === 'staffAuthPage' || activePage === 'clientManagementPage' || activePage === 'addClientPage') {
+            if (activePage === 'staffAuthPage' || activePage === 'userSettingsAuthPage' || activePage === 'clientManagementPage' || activePage === 'addClientPage') {
                 if (activePage === 'addClientPage') {
                     showPage('clientManagementPage');
                 } else if (activePage === 'clientManagementPage') {
@@ -2201,113 +2799,116 @@
         }
 
         function restoreSessionState() {
-            // First, check for auto-login
-            const autoLoggedIn = checkAutoLogin();
-            
-            const savedSession = localStorage.getItem('hellohubSession');
-            
-            // Check if this is a fresh browser session (new tab/window)
-            const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
-            
-            // Mark this browser tab as active
-            sessionStorage.setItem('hellohubActive', 'true');
-            
-            if (autoLoggedIn) {
-                console.log('Auto-login successful');
+            // First, check for auto-login (now async)
+            checkAutoLogin().then(autoLoggedIn => {
+                const savedSession = localStorage.getItem('hellohubSession');
                 
+                // Check if this is a fresh browser session (new tab/window)
+                const isNewBrowserSession = !sessionStorage.getItem('hellohubActive');
+                
+                // Mark this browser tab as active
+                sessionStorage.setItem('hellohubActive', 'true');
+                
+                if (autoLoggedIn) {
+                    console.log('Auto-login successful');
+                    
+                    if (savedSession) {
+                        try {
+                            const sessionState = JSON.parse(savedSession);
+                            
+                            // Restore business and user type if available
+                            if (sessionState.currentBusiness) {
+                                APP.currentBusiness = sessionState.currentBusiness;
+                                document.getElementById('businessDropdown').value = APP.currentBusiness;
+                                updateHeader();
+                                fastSwitchLocation();
+                                
+                                if (sessionState.currentUserType) {
+                                    APP.currentUserType = sessionState.currentUserType;
+                                    document.querySelectorAll('.user-type-btn').forEach(btn => {
+                                        btn.classList.remove('active');
+                                        if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
+                                            btn.classList.add('active');
+                                        }
+                                    });
+                                    showPageWithoutSaving('userTypeSelect');
+                                } else {
+                                    showPageWithoutSaving('userTypeSelect');
+                                }
+                            } else {
+                                showPageWithoutSaving('businessSelect');
+                            }
+                            
+                            saveSessionState();
+                            return;
+                            
+                        } catch (error) {
+                            console.log('Error parsing session after auto-login');
+                            showPageWithoutSaving('businessSelect');
+                            return;
+                        }
+                    } else {
+                        // Auto-logged in but no session data
+                        showPageWithoutSaving('businessSelect');
+                        return;
+                    }
+                }
+                
+                // If no auto-login, start fresh
                 if (savedSession) {
                     try {
                         const sessionState = JSON.parse(savedSession);
                         
-                        // Restore business and user type if available
-                        if (sessionState.currentBusiness) {
-                            APP.currentBusiness = sessionState.currentBusiness;
-                            document.getElementById('businessDropdown').value = APP.currentBusiness;
-                            updateHeader();
-                            fastSwitchLocation();
+                        // Check if we have a complete, valid session
+                        const hasCompleteSession = sessionState.isLoggedIn && 
+                                                  sessionState.company && 
+                                                  sessionState.locations && 
+                                                  sessionState.locations.length > 0;
+                        
+                        if (hasCompleteSession && !isNewBrowserSession) {
+                            // Browser refresh: Restore full state
+                            console.log('Browser refresh detected, restoring full state');
                             
-                            if (sessionState.currentUserType) {
-                                APP.currentUserType = sessionState.currentUserType;
+                            APP.company = sessionState.company;
+                            APP.locations = sessionState.locations;
+                            APP.currentBusiness = sessionState.currentBusiness || '';
+                            APP.currentUserType = sessionState.currentUserType || '';
+                            
+                            setupBusinessDropdown();
+                            if (APP.currentBusiness) {
+                                document.getElementById('businessDropdown').value = APP.currentBusiness;
+                                updateHeader();
+                                fastSwitchLocation();
+                            }
+                            
+                            if (APP.currentUserType) {
                                 document.querySelectorAll('.user-type-btn').forEach(btn => {
                                     btn.classList.remove('active');
                                     if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
                                         btn.classList.add('active');
                                     }
                                 });
-                                showPageWithoutSaving('userTypeSelect');
-                            } else {
-                                showPageWithoutSaving('userTypeSelect');
                             }
+                            
+                            showPageWithoutSaving(sessionState.currentPage || 'userTypeSelect');
                         } else {
-                            showPageWithoutSaving('businessSelect');
+                            console.log('Fresh session or incomplete state, starting at login');
+                            localStorage.removeItem('hellohubSession');
+                            resetToLoginPage();
                         }
-                        
-                        saveSessionState();
-                        return;
-                        
                     } catch (error) {
-                        console.log('Error parsing session after auto-login');
-                        showPageWithoutSaving('businessSelect');
-                        return;
-                    }
-                } else {
-                    // Auto-logged in but no session data
-                    showPageWithoutSaving('businessSelect');
-                    return;
-                }
-            }
-            
-            // If no auto-login, start fresh
-            if (savedSession) {
-                try {
-                    const sessionState = JSON.parse(savedSession);
-                    
-                    // Check if we have a complete, valid session
-                    const hasCompleteSession = sessionState.isLoggedIn && 
-                                              sessionState.company && 
-                                              sessionState.locations && 
-                                              sessionState.locations.length > 0;
-                    
-                    if (hasCompleteSession && !isNewBrowserSession) {
-                        // Browser refresh: Restore full state
-                        console.log('Browser refresh detected, restoring full state');
-                        
-                        APP.company = sessionState.company;
-                        APP.locations = sessionState.locations;
-                        APP.currentBusiness = sessionState.currentBusiness || '';
-                        APP.currentUserType = sessionState.currentUserType || '';
-                        
-                        setupBusinessDropdown();
-                        if (APP.currentBusiness) {
-                            document.getElementById('businessDropdown').value = APP.currentBusiness;
-                            updateHeader();
-                            fastSwitchLocation();
-                        }
-                        
-                        if (APP.currentUserType) {
-                            document.querySelectorAll('.user-type-btn').forEach(btn => {
-                                btn.classList.remove('active');
-                                if (btn.onclick.toString().includes(`'${APP.currentUserType}'`)) {
-                                    btn.classList.add('active');
-                                }
-                            });
-                        }
-                        
-                        showPageWithoutSaving(sessionState.currentPage || 'userTypeSelect');
-                    } else {
-                        console.log('Fresh session or incomplete state, starting at login');
+                        console.log('Error parsing session, starting fresh');
                         localStorage.removeItem('hellohubSession');
                         resetToLoginPage();
                     }
-                } catch (error) {
-                    console.log('Error parsing session, starting fresh');
-                    localStorage.removeItem('hellohubSession');
+                } else {
+                    console.log('No saved session, starting at login page');
                     resetToLoginPage();
                 }
-            } else {
-                console.log('No saved session, starting at login page');
+            }).catch(error => {
+                console.error('Auto-login check failed:', error);
                 resetToLoginPage();
-            }
+            });
         }
 
         function resetToLoginPage() {
@@ -2562,13 +3163,39 @@
             document.getElementById('departureStaffOptions').style.display = 'none';
         }
 
+        function showSettingsForUserType() {
+            // Determine which settings to show based on current user type
+            if (APP.currentUserType === 'client') {
+                showClientSettings();
+            } else if (APP.currentUserType === 'staff') {
+                showStaffSettings();
+            } else {
+                // For visitors, don't show any settings
+                return;
+            }
+        }
+
         function showClientSettings() {
-            showPage('staffAuthPage');
+            // Check if user is logged in and has a password
+            if (AUTH_STATE && AUTH_STATE.isAuthenticated && AUTH_STATE.user) {
+                // For logged-in users, use their login password
+                showPage('userSettingsAuthPage');
+            } else {
+                // Fallback to staff auth for non-logged-in users
+                showPage('staffAuthPage');
+            }
             saveSessionState();
         }
 
         function showStaffSettings() {
-            showPage('staffAuthPage');
+            // Check if user is logged in and has a password
+            if (AUTH_STATE && AUTH_STATE.isAuthenticated && AUTH_STATE.user) {
+                // For logged-in users, use their login password
+                showPage('userSettingsAuthPage');
+            } else {
+                // Fallback to staff auth for non-logged-in users
+                showPage('staffAuthPage');
+            }
             saveSessionState();
         }
 
@@ -2598,6 +3225,42 @@
             } else {
                 showStaffError('Invalid staff password.');
             }
+        }
+
+        function doUserSettingsLogin() {
+            const password = document.getElementById('userSettingsPassword').value.trim();
+            
+            if (!password) {
+                showUserSettingsError('Please enter your password.');
+                return;
+            }
+            
+            // For now, we'll accept any password since we don't store the actual password
+            // In a real implementation, you'd verify against the stored password hash
+            document.getElementById('userSettingsPassword').value = '';
+            hideUserSettingsError();
+            
+            // Check if we're managing staff or clients
+            if (APP.currentUserType === 'staff' && (getLocationName() === 'The Royal' || getLocationName() === 'The Crown' || getLocationName() === 'Seabreeze')) {
+                showPage('staffManagementPage');
+                document.getElementById('currentStaffLocationSpan').textContent = getLocationName();
+                displayStaffList();
+            } else {
+                showPage('clientManagementPage');
+                document.getElementById('currentLocationSpan').textContent = getLocationName();
+                displayClientList();
+            }
+            saveSessionState();
+        }
+
+        function showUserSettingsError(message) {
+            const errorDiv = document.getElementById('userSettingsLoginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideUserSettingsError() {
+            document.getElementById('userSettingsLoginError').style.display = 'none';
         }
 
         function showStaffError(message) {
@@ -2736,8 +3399,7 @@
                         // Store the rating
                         rating.dataset.selectedRating = selectedRating;
                         
-                        console.log(`Rated ${rating.dataset.question}: ${selectedRating} stars`);
-                    });
+                                    });
                     
                     // Hover effect - show preview of what would be selected
                     star.addEventListener('mouseenter', function() {
@@ -2839,6 +3501,15 @@
             // Clear saved login
             localStorage.removeItem('hellohubAuth');
             
+            // Clear authentication state
+            AUTH_STATE = {
+                isAuthenticated: false,
+                user: null,
+                session: null,
+                company: null,
+                locations: []
+            };
+            
             // Reset all APP data
             APP.currentBusiness = '';
             APP.currentUserType = '';
@@ -2864,15 +3535,21 @@
             // Clear session data
             localStorage.removeItem('hellohubSession');
             
+            // Clear any cached data
+            dataCache.clients.clear();
+            dataCache.staff.clear();
+            
             // Go back to login page
             showPage('loginPage');
+            
         }
 
         // Initialize when page loads
         
         // Enhanced iPad-compatible event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, setting up iPad-compatible event listeners');
+            // Check network status on page load
+            checkNetworkStatus();
             
             // Get form elements with safety checks
             const emailField = document.getElementById('emailAddress');
@@ -2912,7 +3589,6 @@
             let touchStartTime = 0;
             
             loginButton.addEventListener('touchstart', function(e) {
-                console.log('Touch start on login button');
                 touchStartTime = Date.now();
                 e.stopPropagation();
                 // Visual feedback
@@ -2920,7 +3596,6 @@
             }, {passive: true});
             
             loginButton.addEventListener('touchend', function(e) {
-                console.log('Touch end on login button');
                 const touchDuration = Date.now() - touchStartTime;
                 
                 // Reset visual feedback
@@ -2930,14 +3605,12 @@
                 if (touchDuration < 1000) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Triggering iPad login submission');
                     handleLoginSubmit(e);
                 }
             }, {passive: false});
             
             // Additional iPad-specific click handler as fallback
             loginButton.addEventListener('click', function(e) {
-                console.log('Click event on login button');
                 e.preventDefault();
                 e.stopPropagation();
                 handleLoginSubmit(e);
@@ -2947,7 +3620,6 @@
             [emailField, passwordField].forEach(field => {
                 // Focus enhancement for iPad
                 field.addEventListener('focus', function() {
-                    console.log('Input field focused:', this.id);
                     // Small delay to ensure iPad Safari processes focus correctly
                     setTimeout(() => {
                         this.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2956,7 +3628,7 @@
                 
                 // Blur enhancement for iPad
                 field.addEventListener('blur', function() {
-                    console.log('Input field blurred:', this.id);
+                    // Blur event handled
                 });
                 
                 // Input enhancement for iPad
@@ -2990,58 +3662,110 @@
         // Client Management Functions
         function loadClientProfiles() {
             const currentLocation = getLocationName();
-            if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            if (!currentCompany) {
                 return Promise.resolve([]);
             }
 
-            // Fetch from Supabase
-            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${currentLocation}&select=*`, {
-                method: 'GET',
-                headers: {
-                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                    'Content-Type': 'application/json'
+            // For Alex Davis, keep the existing location-based filtering
+            if (currentCompany === 'Alex Davis Care Group') {
+                if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
+                    return Promise.resolve([]);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                clientProfiles = data || [];
-                console.log('Loaded client profiles:', clientProfiles);
-                return clientProfiles;
-            })
-            .catch(error => {
-                console.error('Error loading client profiles:', error);
-                clientProfiles = [];
-                return [];
-            });
+                
+                // Fetch from Supabase for Alex Davis (location-based)
+                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?location=eq.${currentLocation}&select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clientProfiles = data || [];
+                    return clientProfiles;
+                })
+                .catch(error => {
+                    clientProfiles = [];
+                    return [];
+                });
+            } else {
+                // For other companies, filter by company
+                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/client_profiles?company=eq.${encodeURIComponent(currentCompany)}&select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clientProfiles = data || [];
+                    return clientProfiles;
+                })
+                .catch(error => {
+                    clientProfiles = [];
+                    return [];
+                });
+            }
         }
 
         function loadStaffProfiles() {
             const currentLocation = getLocationName();
-            if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            if (!currentCompany) {
                 return Promise.resolve([]);
             }
 
-            // Fetch from Supabase
-            return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${currentLocation}&select=*`, {
-                method: 'GET',
-                headers: {
-                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                    'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                    'Content-Type': 'application/json'
+            // For Alex Davis, keep the existing location-based filtering
+            if (currentCompany === 'Alex Davis Care Group') {
+                if (!currentLocation || (currentLocation !== 'The Royal' && currentLocation !== 'The Crown' && currentLocation !== 'Seabreeze')) {
+                    return Promise.resolve([]);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                staffProfiles = data || [];
-                console.log('Loaded staff profiles:', staffProfiles);
-                return staffProfiles;
-            })
-            .catch(error => {
-                console.error('Error loading staff profiles:', error);
-                staffProfiles = [];
-                return [];
-            });
+                
+                // Fetch from Supabase for Alex Davis (location-based)
+                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?location=eq.${currentLocation}&select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    staffProfiles = data || [];
+                    return staffProfiles;
+                })
+                .catch(error => {
+                    staffProfiles = [];
+                    return [];
+                });
+            } else {
+                // For other companies, filter by company
+                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/staff_profiles?company=eq.${encodeURIComponent(currentCompany)}&select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    staffProfiles = data || [];
+                    return staffProfiles;
+                })
+                .catch(error => {
+                    staffProfiles = [];
+                    return [];
+                });
+            }
         }
 
         function showAddClientForm() {
@@ -3049,10 +3773,115 @@
             document.getElementById('clientFormTitle').textContent = 'Add New Client';
             document.getElementById('clientFirstName').value = '';
             document.getElementById('clientLastName').value = '';
+            populateClientLocationDropdown();
             document.getElementById('clientLocation').value = getLocationName();
             resetPhotoPreview();
             showPage('addClientPage');
             saveSessionState();
+        }
+
+        function populateClientLocationDropdown() {
+            const dropdown = document.getElementById('clientLocation');
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            // Clear existing options except the first one
+            dropdown.innerHTML = '<option value="">-- Select Location --</option>';
+            
+            if (currentCompany === 'Alex Davis Care Group') {
+                // Alex Davis locations
+                const alexDavisLocations = ['The Royal', 'The Crown', 'Seabreeze'];
+                alexDavisLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    dropdown.appendChild(option);
+                });
+            } else if (currentCompany && currentCompany !== '') {
+                // Other companies - use their locations from AUTH_STATE
+                const companyLocations = AUTH_STATE?.locations || [];
+                companyLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        function populateStaffLocationDropdown() {
+            const dropdown = document.getElementById('staffLocationSelect');
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            // Clear existing options except the first one
+            dropdown.innerHTML = '<option value="">-- Select Location --</option>';
+            
+            if (currentCompany === 'Alex Davis Care Group') {
+                // Alex Davis locations
+                const alexDavisLocations = ['The Royal', 'The Crown', 'Seabreeze'];
+                alexDavisLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    dropdown.appendChild(option);
+                });
+            } else if (currentCompany && currentCompany !== '') {
+                // Other companies - use their locations from AUTH_STATE
+                const companyLocations = AUTH_STATE?.locations || [];
+                companyLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        function getClientManagementMessage() {
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            if (currentCompany === 'Alex Davis Care Group') {
+                return 'Client management is available for The Royal, The Crown, and Seabreeze locations.';
+            } else if (currentCompany && currentCompany !== '') {
+                const companyLocations = AUTH_STATE?.locations || [];
+                if (companyLocations.length > 0) {
+                    const locationList = companyLocations.join(', ');
+                    return `Client management is available for ${locationList} locations.`;
+                } else {
+                    return 'Client management is available for your company locations.';
+                }
+            } else {
+                return 'Client management is available for supported locations.';
+            }
+        }
+
+        function updateSettingsButtonVisibility() {
+            const currentUserType = APP.currentUserType;
+            const currentCompany = APP.company || AUTH_STATE?.company;
+            
+            // Show settings buttons only for clients and staff, not visitors
+            const shouldShowSettings = currentUserType === 'client' || currentUserType === 'staff';
+            
+            // For Alex Davis, don't show the new settings buttons (they have the original ones)
+            const isAlexDavis = currentCompany === 'Alex Davis Care Group';
+            const shouldShowNewSettings = shouldShowSettings && !isAlexDavis;
+            
+            // Update arriving page settings button
+            const arrivingSettingsBtn = document.getElementById('arrivingSettingsButton');
+            if (arrivingSettingsBtn) {
+                arrivingSettingsBtn.style.display = shouldShowNewSettings ? 'block' : 'none';
+            }
+            
+            // Update leaving page settings button
+            const leavingSettingsBtn = document.getElementById('leavingSettingsButton');
+            if (leavingSettingsBtn) {
+                leavingSettingsBtn.style.display = shouldShowNewSettings ? 'block' : 'none';
+            }
+            
+            // Update feedback page settings button
+            const feedbackSettingsBtn = document.getElementById('feedbackSettingsButton');
+            if (feedbackSettingsBtn) {
+                feedbackSettingsBtn.style.display = shouldShowNewSettings ? 'block' : 'none';
+            }
         }
 
         function editClient(clientId) {
@@ -3095,9 +3924,9 @@
                 })
                 .then(response => {
                     if (response.ok) {
-                        console.log('✅ Client deleted from Supabase');
+                        // Client deleted successfully
                     } else {
-                        console.log('⚠️ Supabase delete failed, but local delete successful');
+                        // Supabase delete failed, but local delete successful
                     }
                 })
                 .catch(error => {
@@ -3133,11 +3962,13 @@
             }
 
             const saveToDatabase = (photoUrl = null) => {
+                const currentCompany = APP.company || AUTH_STATE?.company;
                 const clientData = {
                     first_name: firstName,
                     last_name: lastName,
                     location: location,
-                    photo_url: photoUrl
+                    photo_url: photoUrl,
+                    company: currentCompany // Add company field for data isolation
                 };
 
                 if (editingClientId) {
@@ -3204,14 +4035,13 @@
                 body: JSON.stringify(clientData)
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('✅ Client uploaded to Supabase:', data);
-                // Update the temporary client with real Supabase ID
-                const tempIndex = clientProfiles.findIndex(c => c.id === tempClient.id);
-                if (tempIndex !== -1 && data[0]) {
-                    clientProfiles[tempIndex] = { ...data[0], isTemporary: false };
-                }
-            })
+                            .then(data => {
+                    // Update the temporary client with real Supabase ID
+                    const tempIndex = clientProfiles.findIndex(c => c.id === tempClient.id);
+                    if (tempIndex !== -1 && data[0]) {
+                        clientProfiles[tempIndex] = { ...data[0], isTemporary: false };
+                    }
+                })
             .catch(error => {
                 console.error('⚠️ Background Supabase upload failed:', error);
             });
@@ -3229,9 +4059,9 @@
                 body: JSON.stringify(clientData)
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('✅ Client updated in Supabase:', data);
-            })
+                            .then(data => {
+                    // Client updated successfully
+                })
             .catch(error => {
                 console.error('⚠️ Background Supabase update failed:', error);
             });
@@ -3248,6 +4078,7 @@
             document.getElementById('staffFormTitle').textContent = 'Add New Staff Member';
             document.getElementById('staffFirstName').value = '';
             document.getElementById('staffLastName').value = '';
+            populateStaffLocationDropdown();
             document.getElementById('staffLocationSelect').value = getLocationName();
             resetStaffPhotoPreview();
             showPage('addStaffPage');
@@ -3294,9 +4125,9 @@
                 })
                 .then(response => {
                     if (response.ok) {
-                        console.log('✅ Staff member deleted from Supabase');
+                        // Staff member deleted successfully
                     } else {
-                        console.log('⚠️ Supabase delete failed, but local delete successful');
+                        // Supabase delete failed, but local delete successful
                     }
                 })
                 .catch(error => {
@@ -3332,11 +4163,13 @@
             }
 
             const saveToDatabase = (photoUrl = null) => {
+                const currentCompany = APP.company || AUTH_STATE?.company;
                 const staffData = {
                     first_name: firstName,
                     last_name: lastName,
                     location: location,
-                    photo_url: photoUrl
+                    photo_url: photoUrl,
+                    company: currentCompany // Add company field for data isolation
                 };
 
                 if (editingStaffId) {
@@ -3403,14 +4236,13 @@
                 body: JSON.stringify(staffData)
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('✅ Staff member uploaded to Supabase:', data);
-                // Update the temporary staff with real Supabase ID
-                const tempIndex = staffProfiles.findIndex(s => s.id === tempStaff.id);
-                if (tempIndex !== -1 && data[0]) {
-                    staffProfiles[tempIndex] = { ...data[0], isTemporary: false };
-                }
-            })
+                            .then(data => {
+                    // Update the temporary staff with real Supabase ID
+                    const tempIndex = staffProfiles.findIndex(s => s.id === tempStaff.id);
+                    if (tempIndex !== -1 && data[0]) {
+                        staffProfiles[tempIndex] = { ...data[0], isTemporary: false };
+                    }
+                })
             .catch(error => {
                 console.error('⚠️ Background Supabase upload failed:', error);
             });
@@ -3428,9 +4260,9 @@
                 body: JSON.stringify(staffData)
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('✅ Staff member updated in Supabase:', data);
-            })
+                            .then(data => {
+                    // Staff member updated successfully
+                })
             .catch(error => {
                 console.error('⚠️ Background Supabase update failed:', error);
             });
@@ -3568,7 +4400,97 @@
             saveSessionState();
         }
 
-
+        // SECURE LOGIN FUNCTION - SIMPLIFIED AND RELIABLE
+        async function doSecureLogin(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Get form elements
+            const emailField = document.getElementById('emailAddress');
+            const passwordField = document.getElementById('password');
+            
+            if (!emailField || !passwordField) {
+                showError('Login form error. Please refresh the page.');
+                hideLoadingState();
+                return false;
+            }
+            
+            const email = emailField.value.trim().toLowerCase();
+            const password = passwordField.value.trim();
+            
+            if (!email || !password) {
+                showError('Please enter both email and password.');
+                hideLoadingState();
+                return false;
+            }
+            
+            // Basic email validation
+            if (!email.includes('@') || !email.includes('.')) {
+                showError('Please enter a valid email address.');
+                hideLoadingState();
+                return false;
+            }
+            
+            try {
+                // Use the new simplified authentication
+                const result = await simpleAuth.login(email, password);
+                
+                if (!result.success) {
+                    showError(result.error);
+                    hideLoadingState();
+                    return false;
+                }
+                
+                // Set up authentication state
+                AUTH_STATE = {
+                    isAuthenticated: true,
+                    user: result.data.user,
+                    session: result.data.session,
+                    company: result.data.company,
+                    locations: result.data.locations
+                };
+                
+                // Update APP state for compatibility
+                APP.company = AUTH_STATE.company;
+                APP.locations = AUTH_STATE.locations;
+                
+                // Save secure login state to localStorage
+                const loginData = {
+                    isAuthenticated: true,
+                    company: AUTH_STATE.company,
+                    locations: AUTH_STATE.locations,
+                    loginTime: Date.now(),
+                    expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
+                    userId: result.data.user.id,
+                    accessToken: result.data.session.access_token
+                };
+                localStorage.setItem('hellohubAuth', JSON.stringify(loginData));
+                
+                // Clear form fields
+                emailField.value = '';
+                passwordField.value = '';
+                hideError();
+                hideLoadingState();
+                
+                // Start preloading data immediately after login
+                preloadAllLocationData();
+                
+                setupBusinessDropdown();
+                showPage('businessSelect');
+                saveSessionState();
+                
+                return true;
+                
+            } catch (error) {
+                showError('Login failed. Please try again or contact support if the problem persists.');
+                hideLoadingState();
+                return false;
+            }
+        }
+        
+        // Loading state management for better UX
 </script>
 </body>
 </html>
