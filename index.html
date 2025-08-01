@@ -1016,6 +1016,228 @@
             }
         })();
 
+        // Polyfills for iOS 12 Safari compatibility
+        (function() {
+            // Promise.finally polyfill
+            if (!Promise.prototype.finally) {
+                Promise.prototype.finally = function(callback) {
+                    var P = this.constructor;
+                    return this.then(
+                        function(value) { P.resolve(callback()).then(function() { return value; }); },
+                        function(reason) { P.resolve(callback()).then(function() { throw reason; }); }
+                    );
+                };
+            }
+
+            // Object.assign polyfill
+            if (typeof Object.assign !== 'function') {
+                Object.assign = function(target) {
+                    if (target == null) {
+                        throw new TypeError('Cannot convert undefined or null to object');
+                    }
+                    var to = Object(target);
+                    for (var index = 1; index < arguments.length; index++) {
+                        var nextSource = arguments[index];
+                        if (nextSource != null) {
+                            for (var nextKey in nextSource) {
+                                if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+                                    to[nextKey] = nextSource[nextKey];
+                                }
+                            }
+                        }
+                    }
+                    return to;
+                };
+            }
+
+            // Array.includes polyfill
+            if (!Array.prototype.includes) {
+                Array.prototype.includes = function(searchElement, fromIndex) {
+                    if (this == null) {
+                        throw new TypeError('"this" is null or not defined');
+                    }
+                    var o = Object(this);
+                    var len = o.length >>> 0;
+                    if (len === 0) {
+                        return false;
+                    }
+                    var n = fromIndex | 0;
+                    var k = Math.max(n >= 0 ? n : len + n, 0);
+                    while (k < len) {
+                        if (o[k] === searchElement) {
+                            return true;
+                        }
+                        k++;
+                    }
+                    return false;
+                };
+            }
+
+            // String.includes polyfill
+            if (!String.prototype.includes) {
+                String.prototype.includes = function(search, start) {
+                    if (typeof start !== 'number') {
+                        start = 0;
+                    }
+                    if (start + search.length > this.length) {
+                        return false;
+                    } else {
+                        return this.indexOf(search, start) !== -1;
+                    }
+                };
+            }
+
+            // Array.find polyfill
+            if (!Array.prototype.find) {
+                Array.prototype.find = function(predicate) {
+                    if (this == null) {
+                        throw new TypeError('Array.prototype.find called on null or undefined');
+                    }
+                    if (typeof predicate !== 'function') {
+                        throw new TypeError('predicate must be a function');
+                    }
+                    var list = Object(this);
+                    var length = parseInt(list.length) || 0;
+                    var thisArg = arguments[1];
+                    for (var i = 0; i < length; i++) {
+                        var element = list[i];
+                        if (predicate.call(thisArg, element, i, list)) {
+                            return element;
+                        }
+                    }
+                    return undefined;
+                };
+            }
+
+            // Array.findIndex polyfill
+            if (!Array.prototype.findIndex) {
+                Array.prototype.findIndex = function(predicate) {
+                    if (this == null) {
+                        throw new TypeError('Array.prototype.findIndex called on null or undefined');
+                    }
+                    if (typeof predicate !== 'function') {
+                        throw new TypeError('predicate must be a function');
+                    }
+                    var list = Object(this);
+                    var length = parseInt(list.length) || 0;
+                    var thisArg = arguments[1];
+                    for (var i = 0; i < length; i++) {
+                        var element = list[i];
+                        if (predicate.call(thisArg, element, i, list)) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                };
+            }
+
+            // Array.from polyfill
+            if (!Array.from) {
+                Array.from = (function() {
+                    var toStr = Object.prototype.toString;
+                    var isCallable = function(fn) {
+                        return typeof fn === 'function' || toStr.call(fn) === '[object Function]';
+                    };
+                    var toInteger = function(value) {
+                        var number = Number(value);
+                        if (isNaN(number)) { return 0; }
+                        if (number === 0 || !isFinite(number)) { return number; }
+                        return (number > 0 ? 1 : -1) * Math.floor(Math.abs(number));
+                    };
+                    var maxSafeInteger = Math.pow(2, 53) - 1;
+                    var toLength = function(value) {
+                        var len = toInteger(value);
+                        return Math.min(Math.max(len, 0), maxSafeInteger);
+                    };
+                    return function from(arrayLike) {
+                        var C = this;
+                        var items = Object(arrayLike);
+                        if (arrayLike == null) {
+                            throw new TypeError('Array.from requires an array-like object - not null or undefined');
+                        }
+                        var mapFunction = arguments.length > 1 ? arguments[1] : void undefined;
+                        var T;
+                        if (typeof mapFunction !== 'undefined') {
+                            if (typeof mapFunction !== 'function') {
+                                throw new TypeError('Array.from: when provided, the second argument must be a function');
+                            }
+                            if (arguments.length > 2) {
+                                T = arguments[2];
+                            }
+                        }
+                        var len = toLength(items.length);
+                        var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+                        var k = 0;
+                        var kValue;
+                        while (k < len) {
+                            kValue = items[k];
+                            if (mapFunction) {
+                                A[k] = typeof T === 'undefined' ? mapFunction(kValue, k) : mapFunction.call(T, kValue, k);
+                            } else {
+                                A[k] = kValue;
+                            }
+                            k += 1;
+                        }
+                        A.length = len;
+                        return A;
+                    };
+                }());
+            }
+
+            // Fetch polyfill for older browsers
+            if (!window.fetch) {
+                window.fetch = function(url, options) {
+                    return new Promise(function(resolve, reject) {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open(options && options.method ? options.method.toUpperCase() : 'GET', url);
+                        
+                        if (options && options.headers) {
+                            Object.keys(options.headers).forEach(function(key) {
+                                xhr.setRequestHeader(key, options.headers[key]);
+                            });
+                        }
+                        
+                        xhr.onload = function() {
+                            var response = {
+                                ok: xhr.status >= 200 && xhr.status < 300,
+                                status: xhr.status,
+                                statusText: xhr.statusText,
+                                headers: xhr.getAllResponseHeaders(),
+                                text: function() {
+                                    return Promise.resolve(xhr.responseText);
+                                },
+                                json: function() {
+                                    return Promise.resolve(JSON.parse(xhr.responseText));
+                                }
+                            };
+                            resolve(response);
+                        };
+                        
+                        xhr.onerror = function() {
+                            reject(new Error('Network request failed'));
+                        };
+                        
+                        if (options && options.body) {
+                            xhr.send(options.body);
+                        } else {
+                            xhr.send();
+                        }
+                    });
+                };
+            }
+
+            // crypto.randomUUID polyfill for older browsers
+            if (!crypto.randomUUID) {
+                crypto.randomUUID = function() {
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0;
+                        var v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
+            }
+        })();
+
         // Global variables - MOVED TO TOP LEVEL
         let APP = {
             company: '',
@@ -1038,24 +1260,33 @@
         };
 
         // Retry logic for network requests
-        async function fetchWithRetry(url, options, maxRetries = 3) {
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url, options);
+        function fetchWithRetry(url, options, maxRetries) {
+            maxRetries = maxRetries || 3;
+            var attempt = 1;
+            
+            function attemptRequest() {
+                return fetch(url, options).then(function(response) {
                     if (response.ok) {
                         return response;
                     }
                     // If response is not ok, throw error to trigger retry
-                    throw new Error(`HTTP ${response.status}`);
-                } catch (error) {
+                    throw new Error('HTTP ' + response.status);
+                }).catch(function(error) {
                     // If this is the last attempt, throw the error
                     if (attempt === maxRetries) {
                         throw error;
                     }
                     // Wait before retrying (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-                }
+                    attempt++;
+                    return new Promise(function(resolve) {
+                        setTimeout(function() {
+                            resolve(attemptRequest());
+                        }, Math.pow(2, attempt) * 1000);
+                    });
+                });
             }
+            
+            return attemptRequest();
         }
 
         // Enhanced error handling
@@ -1156,117 +1387,115 @@
         };
 
         // Simple and reliable authentication system
-                const simpleAuth = {
+        var simpleAuth = {
             // Custom authentication system (bypasses Supabase Auth)
-            login: async (email, password) => {
-                try {
-                    // Step 1: Check if user exists in auth_users table
-                    const userResponse = await fetchWithRetry(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?email=eq.${encodeURIComponent(email)}&select=*`, {
-                        headers: {
-                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
-                        }
-                    });
-        
+            login: function(email, password) {
+                // Step 1: Check if user exists in auth_users table
+                return fetchWithRetry(VISITOR_CONFIG.supabaseUrl + '/rest/v1/auth_users?email=eq.' + encodeURIComponent(email) + '&select=*', {
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey
+                    }
+                }).then(function(userResponse) {
                     if (!userResponse.ok) {
                         throw new Error('Failed to check user existence');
                     }
         
-                    const users = await userResponse.json();
-                    if (users.length === 0) {
-                        return { success: false, error: 'User not found in auth system' };
-                    }
-        
-                    const user = users[0];
-        
-                    // Step 2: For now, accept any password (we'll implement proper password checking later)
-                    // TODO: Implement proper password hashing and verification
-                    
-                    return {
-                        success: true,
-                        data: {
-                            user: { id: user.user_id, email: user.email },
-                            session: { access_token: 'custom_token_' + user.user_id },
-                            company: user.company,
-                            locations: user.locations || ['The Royal', 'The Crown', 'Seabreeze']
+                    return userResponse.json().then(function(users) {
+                        if (users.length === 0) {
+                            return { success: false, error: 'User not found in auth system' };
                         }
-                    };
         
-                } catch (error) {
+                        var user = users[0];
+        
+                        // Step 2: For now, accept any password (we'll implement proper password checking later)
+                        // TODO: Implement proper password hashing and verification
+                        
+                        return {
+                            success: true,
+                            data: {
+                                user: { id: user.user_id, email: user.email },
+                                session: { access_token: 'custom_token_' + user.user_id },
+                                company: user.company,
+                                locations: user.locations || ['The Royal', 'The Crown', 'Seabreeze']
+                            }
+                        };
+                    });
+                }).catch(function(error) {
                     return { success: false, error: 'Login failed. Please try again.' };
-                }
+                });
             },
 
             // Check if user exists (simplified)
-            checkUser: async (email) => {
-                try {
-                    const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?email=eq.${encodeURIComponent(email)}&select=*`, {
-                        headers: {
-                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
-                        }
+            checkUser: function(email) {
+                return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/auth_users?email=eq.' + encodeURIComponent(email) + '&select=*', {
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey
+                    }
+                }).then(function(response) {
+                    return response.json().then(function(data) {
+                        return data[0] || null;
                     });
-
-                    const data = await response.json();
-                    return data[0] || null;
-                } catch (error) {
+                }).catch(function(error) {
                     console.error('Error checking user:', error);
                     return null;
-                }
+                });
             }
         };
 
         // Legacy compatibility - keep the old object but make it use the new system
-        const supabaseAuth = {
+        var supabaseAuth = {
             signIn: simpleAuth.login,
             checkUserExists: simpleAuth.checkUser,
-            getUserProfile: async (userId) => {
-                try {
-                    const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users?user_id=eq.${userId}&select=*`, {
-                        headers: {
-                            'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                            'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`
-                        }
+            getUserProfile: function(userId) {
+                return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/auth_users?user_id=eq.' + userId + '&select=*', {
+                    headers: {
+                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                        'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey
+                    }
+                }).then(function(response) {
+                    return response.json().then(function(data) {
+                        return data[0] || null;
                     });
-                    const data = await response.json();
-                    return data[0] || null;
-                } catch (error) {
+                }).catch(function(error) {
                     console.error('Error fetching user profile:', error);
                     return null;
-                }
+                });
             }
         };
 
         // Initialize Supabase client for legacy code compatibility
-        const supabase = {
+        var supabase = {
             from: function(table) {
                 return {
                     select: function(columns) {
                         return {
                             eq: function(column, value) {
                                 // Convert to standard fetch call
-                                return fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}&select=${columns}`, {
+                                return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/' + table + '?' + column + '=eq.' + encodeURIComponent(value) + '&select=' + columns, {
                                     method: 'GET',
                                     headers: {
                                         'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
+                                        'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey,
                                         'Content-Type': 'application/json'
                                     }
-                                })
-                                .then(response => {
+                                }).then(function(response) {
                                     if (!response.ok) {
-                                        throw new Error(`HTTP ${response.status}`);
+                                        throw new Error('HTTP ' + response.status);
                                     }
                                     return response.json();
-                                })
-                                .then(data => ({
-                                    data: data,
-                                    error: null
-                                }))
-                                .catch(error => ({
-                                    data: null,
-                                    error: error
-                                }));
+                                }).then(function(data) {
+                                    return {
+                                        data: data,
+                                        error: null
+                                    };
+                                }).catch(function(error) {
+                                    return {
+                                        data: null,
+                                        error: error
+                                    };
+                                });
                             }
                         };
                     }
@@ -1370,125 +1599,124 @@
             return false;
         }
         
-        async function doSignup(email, password, company, locations, confirmationCode) {
-            try {
-                // TEMPORARILY BYPASS CONFIRMATION CODE FOR TESTING
-                
-                // Check if user already exists
-                const existingUser = await supabaseAuth.checkUserExists(email);
+        function doSignup(email, password, company, locations, confirmationCode) {
+            // TEMPORARILY BYPASS CONFIRMATION CODE FOR TESTING
+            
+            // Check if user already exists
+            return supabaseAuth.checkUserExists(email).then(function(existingUser) {
                 if (existingUser) {
                     return { success: false, error: 'An account with this email already exists.' };
                 }
                 
                 // Generate a UUID for the new user
-                const userId = crypto.randomUUID();
+                var userId = crypto.randomUUID();
                 
                 // Create user directly in auth_users table (bypass Supabase Auth)
-                const profileResult = await createUserProfile(userId, email, company, locations);
-                if (!profileResult.success) {
-                    return { success: false, error: profileResult.error };
-                }
-                
-                // Also create user in auth.users table for compatibility
-                const authUserResult = await createAuthUser(userId, email, password);
-                if (!authUserResult.success) {
-                    // Continue anyway since we have the user in auth_users
-                }
-                
-                return { success: true, data: { user: { id: userId, email: email } } };
-                
-            } catch (error) {
+                return createUserProfile(userId, email, company, locations).then(function(profileResult) {
+                    if (!profileResult.success) {
+                        return { success: false, error: profileResult.error };
+                    }
+                    
+                    // Also create user in auth.users table for compatibility
+                    return createAuthUser(userId, email, password).then(function(authUserResult) {
+                        if (!authUserResult.success) {
+                            // Continue anyway since we have the user in auth_users
+                        }
+                        
+                        return { success: true, data: { user: { id: userId, email: email } } };
+                    });
+                });
+            }).catch(function(error) {
                 return { success: false, error: 'An error occurred during signup.' };
-            }
+            });
         }
         
         // Function to create user in auth.users table
-        async function createAuthUser(userId, email, password) {
-            try {
-                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        email: email,
-                        encrypted_password: password, // We'll hash this in the database
-                        email_confirmed_at: new Date().toISOString(),
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    })
-                });
-                
+        function createAuthUser(userId, email, password) {
+            return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/auth_users', {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    email: email,
+                    encrypted_password: password, // We'll hash this in the database
+                    email_confirmed_at: new Date().toISOString(),
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+            }).then(function(response) {
                 if (response.ok) {
                     return { success: true };
                 } else {
-                    const error = await response.text();
-                    return { success: false, error: error };
+                    return response.text().then(function(error) {
+                        return { success: false, error: error };
+                    });
                 }
-            } catch (error) {
+            }).catch(function(error) {
                 return { success: false, error: error.message };
-            }
+            });
         }
         
-        async function verifyConfirmationCode(code) {
-            try {
-                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/confirmation_codes?code=eq.${encodeURIComponent(code)}&is_used=eq.false&select=*`, {
-                    method: 'GET',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
+        function verifyConfirmationCode(code) {
+            return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/confirmation_codes?code=eq.' + encodeURIComponent(code) + '&is_used=eq.false&select=*', {
+                method: 'GET',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey,
+                    'Content-Type': 'application/json'
+                }
+            }).then(function(response) {
                 if (!response.ok) {
                     return false;
                 }
                 
-                const data = await response.json();
-                return data.length > 0;
-                
-            } catch (error) {
+                return response.json().then(function(data) {
+                    return data.length > 0;
+                });
+            }).catch(function(error) {
                 console.error('Error verifying confirmation code:', error);
                 return false;
-            }
+            });
         }
         
-        async function createUserProfile(userId, email, company, locations) {
-            try {
-                const locationsArray = locations.split(',').map(loc => loc.trim()).filter(loc => loc);
-                
-                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/rest/v1/auth_users`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Authorization': `Bearer ${VISITOR_CONFIG.supabaseAnonKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        email: email,
-                        company: company,
-                        locations: locationsArray,
-                        role: 'admin'
-                    })
-                });
-                
+        function createUserProfile(userId, email, company, locations) {
+            var locationsArray = locations.split(',').map(function(loc) { 
+                return loc.trim(); 
+            }).filter(function(loc) { 
+                return loc; 
+            });
+            
+            return fetch(VISITOR_CONFIG.supabaseUrl + '/rest/v1/auth_users', {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Authorization': 'Bearer ' + VISITOR_CONFIG.supabaseAnonKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    email: email,
+                    company: company,
+                    locations: locationsArray,
+                    role: 'admin'
+                })
+            }).then(function(response) {
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to create user profile');
+                    return response.json().then(function(errorData) {
+                        throw new Error(errorData.message || 'Failed to create user profile');
+                    });
                 }
                 
                 return { success: true };
-                
-            } catch (error) {
+            }).catch(function(error) {
                 console.error('Error creating user profile:', error);
                 return { success: false, error: error.message };
-            }
+            });
         }
         
         function showSignupError(message) {
@@ -1505,45 +1733,44 @@
         }
         
         // Extend supabaseAuth with signup functionality
-        supabaseAuth.signUp = async (email, password) => {
-            try {
-                console.log('🔐 Attempting Supabase signup for:', email);
-                
-                const response = await fetch(`${VISITOR_CONFIG.supabaseUrl}/auth/v1/signup`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': VISITOR_CONFIG.supabaseAnonKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password,
-                        data: {
-                            email_confirm: true
-                        }
-                    })
-                });
-
-                const data = await response.json();
-                console.log('📡 Supabase response:', data);
-                
-                if (!response.ok) {
-                    console.error('❌ Supabase signup failed:', data);
-                    if (data.error === 'User already registered') {
-                        throw new Error('An account with this email already exists.');
-                    } else if (data.error_description) {
-                        throw new Error(data.error_description);
-                    } else {
-                        throw new Error('Signup failed. Please check your email and password.');
+        supabaseAuth.signUp = function(email, password) {
+            console.log('🔐 Attempting Supabase signup for:', email);
+            
+            return fetch(VISITOR_CONFIG.supabaseUrl + '/auth/v1/signup', {
+                method: 'POST',
+                headers: {
+                    'apikey': VISITOR_CONFIG.supabaseAnonKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    data: {
+                        email_confirm: true
                     }
-                }
+                })
+            }).then(function(response) {
+                return response.json().then(function(data) {
+                    console.log('📡 Supabase response:', data);
+                    
+                    if (!response.ok) {
+                        console.error('❌ Supabase signup failed:', data);
+                        if (data.error === 'User already registered') {
+                            throw new Error('An account with this email already exists.');
+                        } else if (data.error_description) {
+                            throw new Error(data.error_description);
+                        } else {
+                            throw new Error('Signup failed. Please check your email and password.');
+                        }
+                    }
 
-                console.log('✅ Supabase signup successful:', data);
-                return { success: true, data: data };
-            } catch (error) {
+                    console.log('✅ Supabase signup successful:', data);
+                    return { success: true, data: data };
+                });
+            }).catch(function(error) {
                 console.error('❌ Supabase Signup Error:', error);
                 return { success: false, error: error.message };
-            }
+            });
         };
         
         // Loading state management for better UX
@@ -1577,65 +1804,65 @@
         let staffProfilesLoaded = false;
 
         // Check if user is already logged in from previous session
-        async function checkAutoLogin() {
-            const savedAuth = localStorage.getItem('hellohubAuth');
+        function checkAutoLogin() {
+            var savedAuth = localStorage.getItem('hellohubAuth');
             
             if (!savedAuth) {
-                return false;
+                return Promise.resolve(false);
             }
             
             try {
-                const authData = JSON.parse(savedAuth);
-                const now = Date.now();
-                const timeElapsed = now - authData.loginTime;
+                var authData = JSON.parse(savedAuth);
+                var now = Date.now();
+                var timeElapsed = now - authData.loginTime;
                 
                 // Check if login has expired (7 days)
                 if (timeElapsed > authData.expiresIn) {
                     localStorage.removeItem('hellohubAuth');
-                    return false;
+                    return Promise.resolve(false);
                 }
                 
                 // Check if we have valid authentication data
                 if (!authData.userId || !authData.accessToken) {
                     localStorage.removeItem('hellohubAuth');
-                    return false;
+                    return Promise.resolve(false);
                 }
                 
                 // Validate the session with Supabase
-                const userProfile = await supabaseAuth.getUserProfile(authData.userId);
-                
-                if (!userProfile) {
-                    localStorage.removeItem('hellohubAuth');
-                    return false;
-                }
-                
-                // Valid saved login found
-                
-                // Restore authentication state
-                AUTH_STATE = {
-                    isAuthenticated: true,
-                    user: { id: authData.userId },
-                    session: { access_token: authData.accessToken },
-                    company: authData.company,
-                    locations: authData.locations
-                };
-                
-                // Restore APP state for compatibility
-                APP.company = AUTH_STATE.company;
-                APP.locations = AUTH_STATE.locations;
-                
-                // Show logged-in state immediately
-                setupBusinessDropdown();
-                updateHeader();
-                
-                // Start preloading data
-                preloadAllLocationData();
-                
-                return true;
+                return supabaseAuth.getUserProfile(authData.userId).then(function(userProfile) {
+                    if (!userProfile) {
+                        localStorage.removeItem('hellohubAuth');
+                        return false;
+                    }
+                    
+                    // Valid saved login found
+                    
+                    // Restore authentication state
+                    AUTH_STATE = {
+                        isAuthenticated: true,
+                        user: { id: authData.userId },
+                        session: { access_token: authData.accessToken },
+                        company: authData.company,
+                        locations: authData.locations
+                    };
+                    
+                    // Restore APP state for compatibility
+                    APP.company = AUTH_STATE.company;
+                    APP.locations = AUTH_STATE.locations;
+                    
+                    // Show logged-in state immediately
+                    setupBusinessDropdown();
+                    updateHeader();
+                    
+                    // Start preloading data
+                    preloadAllLocationData();
+                    
+                    return true;
+                });
                 
             } catch (error) {
                 localStorage.removeItem('hellohubAuth');
-                return false;
+                return Promise.resolve(false);
             }
         }
 
@@ -4401,15 +4628,15 @@
         }
 
         // SECURE LOGIN FUNCTION - SIMPLIFIED AND RELIABLE
-        async function doSecureLogin(event) {
+        function doSecureLogin(event) {
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
             
             // Get form elements
-            const emailField = document.getElementById('emailAddress');
-            const passwordField = document.getElementById('password');
+            var emailField = document.getElementById('emailAddress');
+            var passwordField = document.getElementById('password');
             
             if (!emailField || !passwordField) {
                 showError('Login form error. Please refresh the page.');
@@ -4417,8 +4644,8 @@
                 return false;
             }
             
-            const email = emailField.value.trim().toLowerCase();
-            const password = passwordField.value.trim();
+            var email = emailField.value.trim().toLowerCase();
+            var password = passwordField.value.trim();
             
             if (!email || !password) {
                 showError('Please enter both email and password.');
@@ -4433,10 +4660,8 @@
                 return false;
             }
             
-            try {
-                // Use the new simplified authentication
-                const result = await simpleAuth.login(email, password);
-                
+            // Use the new simplified authentication
+            return simpleAuth.login(email, password).then(function(result) {
                 if (!result.success) {
                     showError(result.error);
                     hideLoadingState();
@@ -4457,7 +4682,7 @@
                 APP.locations = AUTH_STATE.locations;
                 
                 // Save secure login state to localStorage
-                const loginData = {
+                var loginData = {
                     isAuthenticated: true,
                     company: AUTH_STATE.company,
                     locations: AUTH_STATE.locations,
@@ -4482,12 +4707,11 @@
                 saveSessionState();
                 
                 return true;
-                
-            } catch (error) {
+            }).catch(function(error) {
                 showError('Login failed. Please try again or contact support if the problem persists.');
                 hideLoadingState();
                 return false;
-            }
+            });
         }
         
         // Loading state management for better UX
